@@ -2,6 +2,9 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
+import { spawn, execFile } from 'child_process';
+import multer from 'multer';
 import { GoogleGenAI } from '@google/genai';
 import { dbStore, createInitialDb } from './src/server/mockDb.js';
 import type { EmergencyResponseDispatch, EmergencyAlert } from './src/types/index.js';
@@ -13,6 +16,36 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Ensure upload directories exist
+const uploadsDir = path.join(__dirname, 'uploads', 'videos');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+const evidenceDir = path.join(__dirname, 'uploads', 'evidence');
+if (!fs.existsSync(evidenceDir)) {
+  fs.mkdirSync(evidenceDir, { recursive: true });
+}
+
+// Serve uploaded video and evidence files statically
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/evidence', express.static(path.join(__dirname, 'uploads', 'evidence')));
+
+// Multer storage for real video uploads
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.mp4';
+    const base = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9_-]/g, '_');
+    cb(null, `${Date.now()}_${base}${ext}`);
+  }
+});
+const videoUpload = multer({
+  storage,
+  limits: { fileSize: 250 * 1024 * 1024 }
+});
 
 const PORT = 3000;
 const HOST = '0.0.0.0';
@@ -75,6 +108,113 @@ export function publishEvent(event: {
   }
 
   return fullEvent;
+}
+
+// ==========================================
+// PYTHON COMPUTER VISION AI SERVICE INTERFACE
+// ==========================================
+let pythonProcess: any = null;
+
+export async function ensurePythonAIService(): Promise<boolean> {
+  try {
+    const res = await fetch('http://127.0.0.1:5005/health', { signal: AbortSignal.timeout(1500) });
+    if (res.ok) return true;
+  } catch {}
+
+  // Spawn Python AI Service if not already active
+  if (!pythonProcess) {
+    try {
+      console.log('⚡ Launching Python Computer Vision Inference Service on port 5005...');
+      pythonProcess = spawn('python3', [
+        '-m', 'uvicorn',
+        'app.main:app',
+        '--app-dir', 'ai-service',
+        '--port', '5005',
+        '--host', '127.0.0.1'
+      ], {
+        env: {
+          ...process.env,
+          YOLO_CONFIG_DIR: '/tmp/Ultralytics',
+          PYTHONUNBUFFERED: '1'
+        },
+        stdio: 'inherit'
+      });
+
+      pythonProcess.on('exit', (code: any) => {
+        console.warn(`Python AI service process exited with code ${code}`);
+        pythonProcess = null;
+      });
+
+      // Wait briefly for boot
+      for (let i = 0; i < 15; i++) {
+        await new Promise(r => setTimeout(r, 400));
+        try {
+          const res = await fetch('http://127.0.0.1:5005/health', { signal: AbortSignal.timeout(800) });
+          if (res.ok) {
+            console.log('✅ Python Computer Vision AI Service is HEALTHY on port 5005');
+            return true;
+          }
+        } catch {}
+      }
+    } catch (spawnErr) {
+      console.warn('Failed to spawn Python AI service:', spawnErr);
+    }
+  }
+  return false;
+}
+
+export async function executePythonVisionPipeline(videoPath: string, analysisId: string, sampleFps: number = 2.0): Promise<any> {
+  // Ensure background service is running
+  await ensurePythonAIService();
+
+  // 1. Try FastAPI daemon on 127.0.0.1:5005
+  try {
+    const params = new URLSearchParams();
+    params.append('video_path', videoPath);
+    params.append('video_analysis_id', analysisId);
+    params.append('sample_fps', String(sampleFps));
+
+    const response = await fetch('http://127.0.0.1:5005/analyze-file-path', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+      signal: AbortSignal.timeout(60000)
+    });
+
+    if (response.ok) {
+      return await response.json();
+    } else {
+      const errJson = await response.json().catch(() => ({ detail: 'Vision processing failed' }));
+      throw new Error(errJson.detail || 'Vision processing failed');
+    }
+  } catch (err: any) {
+    console.warn(`[Vision AI] HTTP daemon attempt (${err.message}), falling back to direct Python CLI execution...`);
+  }
+
+  // 2. Direct CLI fallback
+  return new Promise((resolve, reject) => {
+    const cliScript = path.join(__dirname, 'ai-service', 'app', 'cli.py');
+    execFile('python3', [cliScript, videoPath, analysisId, String(sampleFps)], {
+      maxBuffer: 50 * 1024 * 1024,
+      env: {
+        ...process.env,
+        YOLO_CONFIG_DIR: '/tmp/Ultralytics'
+      }
+    }, (error: any, stdout: string, stderr: string) => {
+      if (error) {
+        return reject(new Error(stderr || stdout || error.message));
+      }
+      try {
+        const json = JSON.parse(stdout.trim());
+        if (json.error) {
+          return reject(new Error(json.error));
+        }
+        resolve(json);
+      } catch (parseErr) {
+        reject(new Error(`Failed to parse AI output: ${stdout.slice(0, 500)}`));
+      }
+    });
+  });
 }
 
 // ==========================================
