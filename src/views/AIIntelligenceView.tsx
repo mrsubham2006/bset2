@@ -73,7 +73,7 @@ export const AIIntelligenceView: React.FC = () => {
           <div className="flex items-center space-x-2">
             <KonarkWheelIcon size={26} className="text-heritage-maroon dark:text-heritage-gold" />
             <h1 className="font-serif font-bold text-2xl text-heritage-maroon dark:text-heritage-gold">
-              {language === 'en' ? "AI Incident Intelligence & Duplicate Engine" : "AI ବୁଦ୍ଧିମତା ଓ ପ୍ରତିଲିପି ଚିହ୍ନଟ କେନ୍ଦ୍ର"}
+              AI Incident Intelligence &amp; Duplicate Engine
             </h1>
           </div>
           <p className="text-xs text-heritage-aged dark:text-heritage-stone/80 mt-1 font-sans">

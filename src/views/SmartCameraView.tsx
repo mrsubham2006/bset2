@@ -48,7 +48,7 @@ export const SmartCameraView: React.FC = () => {
           <div className="flex items-center space-x-2">
             <Camera className="w-7 h-7 text-heritage-maroon dark:text-heritage-gold" />
             <h1 className="font-serif font-bold text-2xl text-heritage-maroon dark:text-heritage-gold">
-              {language === 'en' ? "Smart Camera & Computer Vision Intelligence" : "ସ୍ମାର୍ଟ କ୍ୟାମେରା ଓ କମ୍ପ୍ୟୁଟର ଭିଜନ କେନ୍ଦ୍ର"}
+              Smart Camera &amp; Computer Vision Intelligence
             </h1>
           </div>
           <p className="text-xs text-heritage-aged dark:text-heritage-stone/80 mt-1 font-sans">

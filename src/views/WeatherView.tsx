@@ -43,7 +43,7 @@ export const WeatherView: React.FC = () => {
           <div className="flex items-center space-x-2">
             <CloudRain className="w-7 h-7 text-heritage-blue animate-bounce" />
             <h1 className="font-serif font-bold text-2xl text-heritage-maroon dark:text-heritage-gold">
-              {language === 'en' ? "Weather & Multi-Factor Flood Risk Intelligence" : "ପାଣିପାଗ ଓ ବନ୍ୟା ବିପଦ ଆକଳନ"}
+              Weather &amp; Multi-Factor Flood Risk Intelligence
             </h1>
           </div>
           <p className="text-xs text-heritage-aged dark:text-heritage-stone/80 mt-1 font-sans">

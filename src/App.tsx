@@ -54,70 +54,96 @@ export const App: React.FC = () => {
   const { isAuthenticated: isCitizenAuthenticated } = useCitizen();
   const { isRoleAuthenticated } = useUnifiedAuth();
   const [activeView, setActiveView] = useState<string>('landing');
+  const [viewHistory, setViewHistory] = useState<string[]>(['landing']);
   const [citizenAuthTab, setCitizenAuthTab] = useState<'register' | 'login'>('register');
   const [municipalAuthTab, setMunicipalAuthTab] = useState<'login' | 'signup' | 'forgot-password' | 'pending-approval'>('login');
   const [isFlagshipOpen, setIsFlagshipOpen] = useState<boolean>(false);
   const [isRoleSwitcherOpen, setIsRoleSwitcherOpen] = useState<boolean>(false);
 
+  // Helper to change view and record history
+  const navigateToView = (nextView: string) => {
+    setActiveView((current) => {
+      if (current !== nextView) {
+        setViewHistory((prev) => [...prev, nextView]);
+      }
+      return nextView;
+    });
+  };
+
+  // Step-by-step Back Handler (1 click = exactly 1 step back)
+  const handleNavigateBack = () => {
+    setViewHistory((prev) => {
+      if (prev.length <= 1) {
+        setActiveView('landing');
+        return ['landing'];
+      }
+      const newHistory = [...prev];
+      newHistory.pop(); // Remove current view
+      const previousView = newHistory[newHistory.length - 1] || 'landing';
+      setActiveView(previousView);
+      return newHistory;
+    });
+  };
+
   // Navigation handling
   const handleNavClick = (viewId: string) => {
     if (viewId === 'citizen') {
       if (isCitizenAuthenticated || isRoleAuthenticated('citizen')) {
-        setActiveView('citizen_dashboard');
+        navigateToView('citizen_dashboard');
       } else {
         setCitizenAuthTab('login');
-        setActiveView('citizen_auth');
+        navigateToView('citizen_auth');
       }
       return;
     }
 
     if (viewId === 'municipal') {
       if (isRoleAuthenticated('municipal')) {
-        setActiveView('municipal');
+        navigateToView('municipal');
       } else {
         setMunicipalAuthTab('login');
-        setActiveView('municipal_auth');
+        navigateToView('municipal_auth');
       }
       return;
     }
 
     if (viewId === 'field_worker') {
       if (isRoleAuthenticated('field_worker')) {
-        setActiveView('field_worker');
+        navigateToView('field_worker');
       } else {
-        setActiveView('field_worker_auth');
+        navigateToView('field_worker_auth');
       }
       return;
     }
 
     if (viewId === 'command') {
       if (isRoleAuthenticated('command')) {
-        setActiveView('command');
+        navigateToView('command');
       } else {
-        setActiveView('command_auth');
+        navigateToView('command_auth');
       }
       return;
     }
 
     if (viewId === 'emergency') {
       if (isRoleAuthenticated('emergency')) {
-        setActiveView('emergency');
+        navigateToView('emergency');
       } else {
-        setActiveView('emergency_auth');
+        navigateToView('emergency_auth');
       }
       return;
     }
 
     if (viewId === 'admin') {
       if (isRoleAuthenticated('admin')) {
-        setActiveView('admin');
+        navigateToView('admin');
       } else {
-        setActiveView('admin_auth');
+        navigateToView('admin_auth');
       }
       return;
     }
 
-    setActiveView(viewId);
+    navigateToView(viewId);
   };
 
   const renderActiveView = () => {
@@ -283,18 +309,18 @@ export const App: React.FC = () => {
             </div>
           );
         }
-        return <EmergencyResponseView onNavigateHome={() => setActiveView('landing')} />;
+        return <EmergencyResponseView onNavigateHome={handleNavigateBack} />;
       case 'emergency_auth':
         if (isRoleAuthenticated('emergency')) {
-          return <EmergencyResponseView onNavigateHome={() => setActiveView('landing')} />;
+          return <EmergencyResponseView onNavigateHome={handleNavigateBack} />;
         }
         return (
           <div className="flex-1 flex items-center justify-center p-4 min-h-[calc(100vh-10rem)]">
             <LoginModal
               isOpen={true}
               role="emergency"
-              onClose={() => setActiveView('landing')}
-              onSuccess={() => setActiveView('emergency')}
+              onClose={handleNavigateBack}
+              onSuccess={() => navigateToView('emergency')}
             />
           </div>
         );
@@ -350,26 +376,23 @@ export const App: React.FC = () => {
         onOpenRoleSwitcher={() => setIsRoleSwitcherOpen(true)}
         activeView={activeView}
         onSelectView={(v) => handleNavClick(v)}
+        onNavigateBack={handleNavigateBack}
       />
 
       {/* Prominent Heritage Tagline Banner (Replaces previous button strip) */}
-      <div className="sticky top-16 z-30 bg-gradient-to-r from-heritage-maroon-dark via-heritage-maroon to-heritage-maroon-dark border-b border-heritage-gold/30 shadow-heritage py-2.5 px-4 text-white">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div className="sticky top-16 z-30 bg-gradient-to-r from-heritage-maroon-dark via-heritage-maroon to-heritage-maroon-dark border-b border-heritage-gold/30 shadow-heritage py-2 px-3 sm:px-6 text-white w-full">
+        <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-2">
           
           {/* Tagline Content */}
           <div className="flex items-center space-x-3 text-center sm:text-left">
             <KonarkWheelIcon size={22} className="text-heritage-gold shrink-0 animate-spin-slow hidden xs:block" />
             <div className="flex flex-col md:flex-row md:items-center md:space-x-3">
               <span className="font-serif font-bold text-heritage-gold tracking-wide text-xs sm:text-sm">
-                {language === 'en'
-                  ? "When the City Thinks, Every Life Matters"
-                  : "ଯେତେବେଳେ ସହର ଚିନ୍ତା କରେ, ପ୍ରତ୍ୟେକ ଜୀବନ ଗୁରୁତ୍ୱପୂର୍ଣ୍ଣ"}
+                When the City Thinks, Every Life Matters
               </span>
               <span className="hidden md:inline text-heritage-gold/50">•</span>
               <span className="text-heritage-stone/90 text-xs font-sans tracking-normal">
-                {language === 'en'
-                  ? "The AI Nervous System for a Self-Healing City in Odisha"
-                  : "ଏକ ସହର, ଏକ ବୁଦ୍ଧିମତା — ଓଡ଼ିଶା ସ୍ମାର୍ଟ ଶାସନ"}
+                The AI Nervous System for a Self-Healing City in Odisha
               </span>
             </div>
           </div>

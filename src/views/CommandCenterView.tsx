@@ -169,7 +169,7 @@ export const CommandCenterView: React.FC = () => {
           <div className="flex items-center space-x-2">
             <KonarkWheelIcon size={26} className="text-heritage-maroon dark:text-heritage-gold" />
             <h1 className="font-serif font-bold text-2xl text-heritage-maroon dark:text-heritage-gold">
-              {language === 'en' ? "City Command Center (Odisha Urban Ops)" : "ମୁଖ୍ୟ ନଗର ନିୟନ୍ତ୍ରଣ କକ୍ଷ"}
+              City Command Center (Odisha Urban Ops)
             </h1>
           </div>
           <p className="text-xs text-heritage-aged dark:text-heritage-stone/80 mt-1 font-sans">

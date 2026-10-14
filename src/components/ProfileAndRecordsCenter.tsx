@@ -457,7 +457,7 @@ export const ProfileAndRecordsCenter: React.FC<ProfileAndRecordsCenterProps> = (
                 <span>{profile?.default_area || 'Saheed Nagar, Ward 32, Bhubaneswar'}</span>
                 <span>•</span>
                 <span className="text-heritage-gold">
-                  {profile?.preferred_language === 'or' ? 'ଓଡ଼ିଆ (Odia)' : profile?.preferred_language === 'hi' ? 'हिन्दी (Hindi)' : 'English'}
+                  English
                 </span>
               </p>
               <div className="flex items-center space-x-3 mt-2 text-[11px] text-white/70">

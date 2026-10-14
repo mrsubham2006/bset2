@@ -70,24 +70,13 @@ export const LandingView: React.FC<LandingViewProps> = ({ onExplore, onOpenFlags
 
           {/* Headline */}
           <h1 className="font-serif font-extrabold text-3xl sm:text-5xl lg:text-6xl text-heritage-maroon dark:text-heritage-ivory tracking-tight leading-tight">
-            {language === 'en' ? (
-              <>
-                One City. One Intelligence. <br />
-                <span className="text-heritage-gold">Faster Response.</span>
-              </>
-            ) : (
-              <>
-                ଏକ ସହର। ଏକ ବୁଦ୍ଧିମତା। <br />
-                <span className="text-heritage-gold">ତୁରନ୍ତ ପ୍ରତିକ୍ରିୟା।</span>
-              </>
-            )}
+            One City. One Intelligence. <br />
+            <span className="text-heritage-gold">Faster Response.</span>
           </h1>
 
           {/* Subheading */}
           <p className="mt-5 max-w-2xl mx-auto text-sm sm:text-base text-heritage-aged dark:text-heritage-stone/90 font-sans leading-relaxed">
-            {language === 'en'
-              ? "Rooted in Odisha's spirit of community. Powered by artificial intelligence. Built for safer, smarter cities. CIVIC NEXUS AI connects citizens, public services, infrastructure, and emergency responders through one unified operational nervous system."
-              : "ଓଡ଼ିଶାର ସାମୂହିକ ଐତିହ୍ୟରେ ପରିପୁଷ୍ଟ ଏବଂ କୃତ୍ରିମ ବୁଦ୍ଧିମତାରେ ପରିଚାଳିତ ଏକ ସ୍ମାର୍ଟ ନଗର ପରିଚାଳନା ପ୍ଲାଟଫର୍ମ।"}
+            Rooted in Odisha's spirit of community. Powered by artificial intelligence. Built for safer, smarter cities. CIVIC NEXUS AI connects citizens, public services, infrastructure, and emergency responders through one unified operational nervous system.
           </p>
 
           {/* Call to Actions */}
@@ -96,7 +85,7 @@ export const LandingView: React.FC<LandingViewProps> = ({ onExplore, onOpenFlags
               onClick={() => onExplore('portal')}
               className="flex items-center space-x-2 px-6 py-3 rounded-xl bg-heritage-maroon hover:bg-heritage-maroon-dark text-white font-semibold text-sm shadow-heritage transition-all hover:scale-105 border border-heritage-gold/30"
             >
-              <span>{language === 'en' ? "Secure Access Portal (6 Panels)" : "ସୁରକ୍ଷିତ ପ୍ରବେଶ ପୋର୍ଟାଲ (୬ ପ୍ୟାନେଲ)"}</span>
+              <span>Secure Access Portal (6 Panels)</span>
               <ArrowRight className="w-4 h-4 text-heritage-gold" />
             </button>
 
@@ -104,7 +93,7 @@ export const LandingView: React.FC<LandingViewProps> = ({ onExplore, onOpenFlags
               onClick={() => onExplore('command')}
               className="flex items-center space-x-2 px-6 py-3 rounded-xl bg-heritage-ivory dark:bg-heritage-charcoal border-2 border-heritage-maroon text-heritage-maroon dark:text-heritage-gold hover:bg-heritage-stone/40 font-semibold text-sm shadow-sm transition-all hover:scale-105"
             >
-              <span>{language === 'en' ? "Command Center" : "ନଗର ନିୟନ୍ତ୍ରଣ କକ୍ଷ"}</span>
+              <span>Command Center</span>
             </button>
 
             <button
@@ -112,7 +101,7 @@ export const LandingView: React.FC<LandingViewProps> = ({ onExplore, onOpenFlags
               className="flex items-center space-x-2 px-5 py-3 rounded-xl bg-gradient-to-r from-heritage-gold to-heritage-orange text-heritage-charcoal-dark font-semibold text-sm shadow-gold-glow hover:brightness-110 transition-all hover:scale-105"
             >
               <Zap className="w-4 h-4 text-heritage-maroon fill-current" />
-              <span>{language === 'en' ? "18-Step Scenario" : "୧୮-ସ୍ତରୀୟ ପ୍ରଦର୍ଶନ"}</span>
+              <span>18-Step Scenario</span>
             </button>
           </div>
 

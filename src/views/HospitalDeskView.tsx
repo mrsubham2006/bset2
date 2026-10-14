@@ -50,7 +50,7 @@ export const HospitalDeskView: React.FC = () => {
           <div className="flex items-center space-x-2">
             <HospIcon className="w-7 h-7 text-heritage-blue" />
             <h1 className="font-serif font-bold text-2xl text-heritage-maroon dark:text-heritage-gold">
-              {language === 'en' ? "Hospital Trauma & Bed Availability Network" : "ଚିକିତ୍ସାଳୟ ଆପାତକାଳୀନ ଶଯ୍ୟା ସମନ୍ୱୟ"}
+              Hospital Trauma &amp; Bed Availability Network
             </h1>
           </div>
           <p className="text-xs text-heritage-aged dark:text-heritage-stone/80 mt-1 font-sans">

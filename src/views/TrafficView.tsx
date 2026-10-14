@@ -85,7 +85,7 @@ export const TrafficView: React.FC = () => {
           <div className="flex items-center space-x-2">
             <Navigation className="w-7 h-7 text-heritage-maroon dark:text-heritage-gold" />
             <h1 className="font-serif font-bold text-2xl text-heritage-maroon dark:text-heritage-gold">
-              {language === 'en' ? "Traffic Management & Emergency Corridors" : "ଟ୍ରାଫିକ ପରିଚାଳନା ଓ ଜରୁରୀକାଳୀନ ପଥ"}
+              Traffic Management &amp; Emergency Corridors
             </h1>
           </div>
           <p className="text-xs text-heritage-aged dark:text-heritage-stone/80 mt-1 font-sans">

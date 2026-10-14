@@ -62,7 +62,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="flex items-center justify-between px-2 mb-3">
           {!collapsed && (
             <span className="text-[11px] font-bold uppercase tracking-wider text-heritage-gold">
-              {language === 'en' ? "OPERATIONAL MODULES" : "ପରିଚାଳନା ବିଭାଗ"}
+              OPERATIONAL MODULES
             </span>
           )}
           <button
@@ -78,7 +78,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {navigationItems.map(item => {
             const Icon = item.icon;
             const isActive = activeView === item.id;
-            const label = language === 'en' ? item.labelEn : item.labelOr;
+            const label = item.labelEn;
 
             return (
               <button
@@ -116,7 +116,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <Zap className="w-4 h-4 text-heritage-charcoal shrink-0" />
           {!collapsed && (
             <span className="truncate">
-              {language === 'en' ? "Flagship 18-Step Run" : "ଫ୍ଲାଗସିପ୍ ପ୍ରଦର୍ଶନ"}
+              Flagship 18-Step Run
             </span>
           )}
         </button>

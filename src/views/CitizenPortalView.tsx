@@ -38,16 +38,16 @@ const CitizenPortalInner: React.FC = () => {
 
   // Nav items for the left sidebar
   const navItems = [
-    { id: 'home' as const, label: 'Home', labelOr: 'ମୁଖ୍ୟ', icon: Home },
-    { id: 'report' as const, label: 'Report / Request', labelOr: 'ଅଭିଯୋଗ', icon: PlusCircle },
-    { id: 'cases' as const, label: 'My Cases', labelOr: 'ମୋ ମାମଲା', icon: Briefcase, badge: cases.filter(c => c.unread_updates > 0).length },
-    { id: 'city_map' as const, label: 'City Map', labelOr: 'ସ୍ୱ ମ୍ୟାପ', icon: Map },
-    { id: 'community' as const, label: 'Community', labelOr: 'ସମ୍ପ୍ରଦାୟ', icon: Users },
-    { id: 'tourism' as const, label: 'Smart Tourism', labelOr: 'ପ୍ରୟର୍ଟ', icon: Compass },
-    { id: 'inbox' as const, label: 'Inbox', labelOr: 'ସୂଚନା', icon: Bell, badge: unreadCitizenNotifs },
-    { id: 'records' as const, label: 'My Records', labelOr: 'ଦଲିଲ', icon: Archive },
-    { id: 'profile' as const, label: 'Profile', labelOr: 'ପ୍ରୋଫାଇଲ', icon: User },
-    { id: 'help' as const, label: 'Help & Support', labelOr: 'ସହାୟ', icon: HelpCircle },
+    { id: 'home' as const, label: 'Home', icon: Home },
+    { id: 'report' as const, label: 'Report / Request', icon: PlusCircle },
+    { id: 'cases' as const, label: 'My Cases', icon: Briefcase, badge: cases.filter(c => c.unread_updates > 0).length },
+    { id: 'city_map' as const, label: 'City Map', icon: Map },
+    { id: 'community' as const, label: 'Community', icon: Users },
+    { id: 'tourism' as const, label: 'Smart Tourism', icon: Compass },
+    { id: 'inbox' as const, label: 'Inbox', icon: Bell, badge: unreadCitizenNotifs },
+    { id: 'records' as const, label: 'My Records', icon: Archive },
+    { id: 'profile' as const, label: 'Profile', icon: User },
+    { id: 'help' as const, label: 'Help & Support', icon: HelpCircle },
   ];
 
   const renderSection = () => {
@@ -1637,7 +1637,7 @@ const Profile: React.FC = () => {
             <div className="flex items-center justify-between text-xs border-b border-heritage-stone/30 dark:border-heritage-charcoal pb-2">
               <span className="text-heritage-aged font-semibold">Preferred Language</span>
               <span className="text-heritage-charcoal dark:text-heritage-ivory">
-                {citizenUser?.preferred_language === 'or' ? 'ଓଡ଼ିଆ (Odia)' : 'English'}
+                English
               </span>
             </div>
             <div className="flex items-center justify-between text-xs border-b border-heritage-stone/30 dark:border-heritage-charcoal pb-2">

@@ -115,16 +115,14 @@ export const FlagshipRunnerModal: React.FC<FlagshipRunnerModalProps> = ({
             <div>
               <div className="flex items-center space-x-2">
                 <h3 className="font-serif font-bold text-lg sm:text-xl text-white">
-                  {language === 'en' ? "Flagship End-to-End Smart City Scenario" : "୧୮-ସ୍ତରୀୟ ଫ୍ଲାଗସିପ୍ ନଗର ପରିଚାଳନା ପ୍ରଦର୍ଶନ"}
+                  Flagship End-to-End Smart City Scenario
                 </h3>
                 <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-heritage-gold text-heritage-charcoal">
                   18 STEPS
                 </span>
               </div>
               <p className="text-xs text-heritage-stone/90 mt-0.5">
-                {language === 'en'
-                  ? "Flooding at Rasulgarh Underpass blocks NH-16 and threatens an emergency ambulance route to AIIMS."
-                  : "ରସୁଲଗଡ଼ ପୋଲ ତଳେ ଜଳବନ୍ଦୀ ଯୋଗୁଁ NH-16 ଅବରୋଧ ଓ AIIMS ଆମ୍ବୁଲାନ୍ସ ପଥ ସମନ୍ୱୟ।"}
+                Flooding at Rasulgarh Underpass blocks NH-16 and threatens an emergency ambulance route to AIIMS.
               </p>
             </div>
           </div>

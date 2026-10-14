@@ -333,12 +333,10 @@ export const UnifiedInboxCenter: React.FC = () => {
             </div>
             
             <h1 className="font-serif font-black text-2xl sm:text-3xl lg:text-4xl tracking-tight text-white">
-              {lang === 'en' ? 'Inbox' : 'ସୂଚନା କେନ୍ଦ୍ର'}
+              Inbox
             </h1>
             <p className="text-white/80 text-xs sm:text-sm mt-1.5 font-light">
-              {lang === 'en'
-                ? 'Updates that matter to you — cases, reviews, official replies, and community decisions.'
-                : 'ଆପଣଙ୍କ ଅଭିଯୋଗ, ମତାମତ ଏବଂ ପ୍ରଶାସନିକ ସୂଚନା ସବୁ ଏକାଠି।'}
+              Updates that matter to you — cases, reviews, official replies, and community decisions.
             </p>
           </div>
 
@@ -350,21 +348,6 @@ export const UnifiedInboxCenter: React.FC = () => {
               <Check className="w-3.5 h-3.5 text-heritage-gold" />
               <span>Mark All Read</span>
             </button>
-
-            <div className="flex bg-black/30 backdrop-blur-md rounded-2xl p-1 border border-white/10 text-xs">
-              <button
-                onClick={() => setLang('en')}
-                className={`px-3 py-1 rounded-xl font-bold transition-all ${lang === 'en' ? 'bg-heritage-gold text-heritage-charcoal' : 'text-white/70'}`}
-              >
-                EN
-              </button>
-              <button
-                onClick={() => setLang('or')}
-                className={`px-3 py-1 rounded-xl font-bold transition-all ${lang === 'or' ? 'bg-heritage-gold text-heritage-charcoal' : 'text-white/70'}`}
-              >
-                ଓଡ଼ିଆ
-              </button>
-            </div>
           </div>
         </div>
 
@@ -405,11 +388,11 @@ export const UnifiedInboxCenter: React.FC = () => {
       {/* ── NAVIGATION TABS ─────────────────────────────────────────────────── */}
       <div className="flex space-x-2 overflow-x-auto pb-2 mb-6 border-b border-heritage-stone dark:border-heritage-charcoal scrollbar-none">
         {[
-          { id: 'all', label: 'All Notifications', labelOr: 'ସମସ୍ତ ସୂଚନା', icon: InboxIcon, badge: stats.unread_count },
-          { id: 'action_required', label: 'Action Required', labelOr: 'କାର୍ଯ୍ୟାନୁଷ୍ଠାନ ଆବଶ୍ୟକ', icon: AlertTriangle, badge: stats.needs_action_count },
-          { id: 'messages', label: 'Official Messages', labelOr: 'ସରକାରୀ ବାର୍ତ୍ତା', icon: MessageSquare, badge: threads.length },
-          { id: 'alerts', label: 'Alerts & Announcements', labelOr: 'ଘୋଷଣାବଳୀ', icon: Megaphone },
-          { id: 'preferences', label: 'Notification Settings', labelOr: 'ବ୍ୟବସ୍ଥାପନା', icon: Settings },
+          { id: 'all', label: 'All Notifications', icon: InboxIcon, badge: stats.unread_count },
+          { id: 'action_required', label: 'Action Required', icon: AlertTriangle, badge: stats.needs_action_count },
+          { id: 'messages', label: 'Official Messages', icon: MessageSquare, badge: threads.length },
+          { id: 'alerts', label: 'Alerts & Announcements', icon: Megaphone },
+          { id: 'preferences', label: 'Notification Settings', icon: Settings },
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -430,7 +413,7 @@ export const UnifiedInboxCenter: React.FC = () => {
               }`}
             >
               <Icon className={`w-4 h-4 ${isActive ? 'text-heritage-gold' : 'text-heritage-maroon dark:text-heritage-gold'}`} />
-              <span>{lang === 'en' ? tab.label : tab.labelOr}</span>
+              <span>{tab.label}</span>
               {tab.badge !== undefined && tab.badge > 0 && (
                 <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
                   isActive ? 'bg-heritage-gold text-heritage-charcoal' : 'bg-heritage-maroon/10 text-heritage-maroon dark:text-heritage-gold'

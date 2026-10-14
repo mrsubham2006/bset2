@@ -3663,84 +3663,8 @@ app.post(['/api/v1/flagship/reset', '/api/v1/demo/reset'], (req: Request, res: R
 
 // ==========================================
 // 10. SMART TOURISM MODULE
+// (Implemented in comprehensive section below: /api/tourism/*)
 // ==========================================
-app.get('/api/tourism/destinations', (req: Request, res: Response) => {
-  res.json(dbStore.tourismPlaces);
-});
-
-app.get('/api/tourism/destinations/:id', (req: Request, res: Response) => {
-  const dest = dbStore.tourismPlaces.find(t => t.id === Number(req.params.id)) || dbStore.tourismPlaces[0];
-  res.json(dest);
-});
-
-app.get('/api/tourism/events', (req: Request, res: Response) => {
-  res.json([
-    { id: 1, title: 'Konark Dance Festival', location: 'Konark Sun Temple Open Air Auditorium', date: 'Dec 1 - Dec 5', category: 'Classical Dance & Cultural Heritage' },
-    { id: 2, title: 'Ratha Yatra Puri', location: 'Grand Road, Puri', date: 'July Annual Celebration', category: 'Global Pilgrimage & Chariot Festival' },
-    { id: 3, title: 'Toshali National Crafts Mela', location: 'Janpath, Bhubaneswar', date: 'Dec 15 - Dec 27', category: 'Handloom & Handicrafts Exposition' }
-  ]);
-});
-
-app.get('/api/tourism/advisories', (req: Request, res: Response) => {
-  res.json([
-    { id: 1, level: 'INFO', title: 'High Tide Warning at Blue Flag Beach Puri', message: 'Lifeguard stations active. Red flags posted near lighthouse zone.' },
-    { id: 2, level: 'CLEAR', title: 'Heritage Corridor Smooth Traffic', message: 'Ekamra Kshetra electric golf carts operating normally.' }
-  ]);
-});
-
-app.get('/api/tourism/heritage-trails', (req: Request, res: Response) => {
-  res.json([
-    { id: 1, name: 'Ekamra Kshetra 1,000-Year Temple Trail', duration: '3 Hours', stops: ['Lingaraj Temple', 'Mukteshwar Temple', 'Ananta Vasudeva', 'Bindusagar Lake'] },
-    { id: 2, name: 'Ashokan Peace & Rock Edicts Circuit', duration: '2.5 Hours', stops: ['Dhauli Peace Pagoda', 'Rock Edict Inscription', 'Daya River Memorial'] },
-    { id: 3, name: 'Puri Golden Beach & Jagannath Corridor', duration: '4 Hours', stops: ['Jagannath Temple Heritage Corridor', 'Raghurajpur Crafts Village', 'Blue Flag Beach'] }
-  ]);
-});
-
-app.get('/api/tourism/itineraries', (req: Request, res: Response) => {
-  res.json([]);
-});
-
-app.post('/api/tourism/itineraries', (req: Request, res: Response) => {
-  res.status(201).json({ id: 101, message: 'Custom Odisha Heritage Itinerary created and saved' });
-});
-
-app.post('/api/tourism/saved-destinations', (req: Request, res: Response) => {
-  res.status(201).json({ message: 'Destination saved to citizen profile' });
-});
-
-app.get('/api/tourism/saved-destinations', (req: Request, res: Response) => {
-  res.json(dbStore.tourismPlaces.slice(0, 2));
-});
-
-app.delete('/api/tourism/saved-destinations/:id', (req: Request, res: Response) => {
-  res.json({ message: 'Removed from saved destinations' });
-});
-
-app.post('/api/tourism/content-corrections', (req: Request, res: Response) => {
-  res.status(201).json({ message: 'Tourism correction submitted for moderation' });
-});
-
-app.post('/api/tourism/ai-planner', async (req: Request, res: Response) => {
-  const { duration_days, interests } = req.body;
-  if (ai) {
-    try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: `Create a customized ${duration_days || 2}-day tourism itinerary for Odisha focusing on ${interests || 'Culture, Temples, Heritage, Nature'}. Return structured JSON.`
-      });
-      return res.json({ itinerary: response.text });
-    } catch (e) {
-      console.warn('AI planner fallback:', e);
-    }
-  }
-  res.json({
-    title: `${duration_days || 2}-Day Smart Heritage Odisha Tour`,
-    days: [
-      { day: 1, title: 'Bhubaneswar Temple City & Dhauli Peace Stupa', spots: ['Lingaraj Temple', 'Mukteshwar', 'Dhauli Hill'] },
-      { day: 2, title: 'Puri Jagannath Shrine & Konark Sun Wheel', spots: ['Puri Jagannath Corridor', 'Konark Sun Temple', 'Chandrabhaga Beach'] }
-    ]
-  });
-});
 
 // ==========================================
 // 11. CITIZEN INBOX & THREADS
@@ -4988,6 +4912,777 @@ app.get('/api/v1/system/run-e2e-tests', (req: Request, res: Response) => {
       error: err.message || 'Error executing test suite'
     });
   }
+});
+
+// ==========================================
+// SMART TOURISM PLATFORM — BALASORE DISTRICT
+// ==========================================
+
+// GET /api/tourism/destinations — list destinations with filters
+app.get('/api/tourism/destinations', (req: Request, res: Response) => {
+  try {
+    const { search, category, district, accessibility, featured } = req.query;
+    let destinations = [...dbStore.tourismDestinations];
+
+    if (search && typeof search === 'string') {
+      const q = search.toLowerCase();
+      destinations = destinations.filter(d =>
+        d.name.toLowerCase().includes(q) ||
+        d.odia_name.toLowerCase().includes(q) ||
+        d.description.toLowerCase().includes(q) ||
+        d.district.toLowerCase().includes(q) ||
+        (d.tagline || '').toLowerCase().includes(q) ||
+        (d.cultural_significance || '').toLowerCase().includes(q)
+      );
+    }
+
+    if (category && category !== 'ALL') {
+      destinations = destinations.filter(d => d.category === category);
+    }
+
+    if (district && district !== 'ALL') {
+      destinations = destinations.filter(d => d.district === district);
+    }
+
+    if (accessibility && accessibility === 'VERIFIED_ACCESSIBLE') {
+      destinations = destinations.filter(d => d.accessibility_status === 'VERIFIED_ACCESSIBLE');
+    } else if (accessibility === 'PARTIALLY_ACCESSIBLE') {
+      destinations = destinations.filter(d => d.accessibility_status === 'PARTIALLY_ACCESSIBLE');
+    }
+
+    if (featured === 'true') {
+      destinations = destinations.filter(d => d.is_featured);
+    }
+
+    res.json({
+      destinations,
+      total: destinations.length,
+      filters_applied: { search, category, district, accessibility }
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to fetch destinations', detail: err.message });
+  }
+});
+
+// GET /api/tourism/destinations/:id — get destination detail
+app.get('/api/tourism/destinations/:id', (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    const destination = dbStore.tourismDestinations.find(d => d.id === id);
+    if (!destination) {
+      return res.status(404).json({ error: 'Destination not found', destination_id: id });
+    }
+    // Attach active advisories for this destination's district
+    const activeAdvisories = dbStore.tourismAdvisories.filter(a => a.district === destination.district);
+    res.json({ ...destination, active_advisories: activeAdvisories, upcoming_events: dbStore.tourismEvents.filter(e => e.district === destination.district && e.status !== 'CANCELLED') });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to fetch destination', detail: err.message });
+  }
+});
+
+// GET /api/tourism/search — text search
+app.get('/api/tourism/search', (req: Request, res: Response) => {
+  try {
+    const { q } = req.query;
+    if (!q || typeof q !== 'string') {
+      return res.json({ destinations: [], query: '' });
+    }
+    const query = q.toLowerCase();
+    const results = dbStore.tourismDestinations.filter(d =>
+      d.name.toLowerCase().includes(query) ||
+      d.odia_name.toLowerCase().includes(query) ||
+      d.description.toLowerCase().includes(query) ||
+      d.district.toLowerCase().includes(query) ||
+      d.category.toLowerCase().includes(query)
+    );
+    res.json({ destinations: results, query: q, total: results.length });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Search failed', detail: err.message });
+  }
+});
+
+// GET /api/tourism/nearby — find destinations near coordinates
+app.get('/api/tourism/nearby', (req: Request, res: Response) => {
+  try {
+    const { lat, lng, radius_km = '50' } = req.query;
+    const centerLat = parseFloat(lat as string);
+    const centerLng = parseFloat(lng as string);
+    const radius = parseFloat(radius_km as string);
+
+    if (isNaN(centerLat) || isNaN(centerLng)) {
+      return res.status(400).json({ error: 'Valid lat and lng parameters are required' });
+    }
+
+    // Haversine distance calculation
+    const nearby = dbStore.tourismDestinations.filter(d => {
+      const R = 6371;
+      const dLat = (d.latitude - centerLat) * Math.PI / 180;
+      const dLng = (d.longitude - centerLng) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(centerLat * Math.PI / 180) * Math.cos(d.latitude * Math.PI / 180) *
+        Math.sin(dLng / 2) * Math.sin(dLng / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      const dist = R * c;
+      (d as any)._distance_km = Math.round(dist * 10) / 10;
+      return dist <= radius;
+    }).sort((a: any, b: any) => a._distance_km - b._distance_km);
+
+    res.json({ destinations: nearby, center: { lat: centerLat, lng: centerLng }, radius_km: radius });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Nearby search failed', detail: err.message });
+  }
+});
+
+// GET /api/tourism/events — list tourism events
+app.get('/api/tourism/events', (_req: Request, res: Response) => {
+  res.json(dbStore.tourismEvents);
+});
+
+// GET /api/tourism/advisories — list active advisories
+app.get('/api/tourism/advisories', (_req: Request, res: Response) => {
+  res.json(dbStore.tourismAdvisories);
+});
+
+// GET /api/tourism/heritage-trails — list heritage circuits
+app.get('/api/tourism/heritage-trails', (_req: Request, res: Response) => {
+  res.json(dbStore.heritageTrails);
+});
+
+// GET /api/tourism/saved-destinations — get saved destinations for a citizen
+app.get('/api/tourism/saved-destinations', (req: Request, res: Response) => {
+  try {
+    const citizen_id = parseInt(req.query.citizen_id as string) || 1;
+    const saved = dbStore.tourismSavedDestinations.filter(s => s.citizen_id === citizen_id);
+    // Enrich with destination data
+    const enriched = saved.map(s => {
+      const dest = dbStore.tourismDestinations.find(d => d.id === s.destination_id);
+      return {
+        ...s,
+        name: dest?.name || s.name,
+        odia_name: dest?.odia_name || s.odia_name,
+        image_url: dest?.image_url || s.image_url,
+        district: dest?.district || s.district,
+        category: dest?.category,
+        rating: dest?.rating,
+      };
+    });
+    res.json(enriched);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to fetch saved destinations', detail: err.message });
+  }
+});
+
+// POST /api/tourism/saved-destinations — save a destination
+app.post('/api/tourism/saved-destinations', (req: Request, res: Response) => {
+  try {
+    const destination_id = parseInt(req.query.destination_id as string || req.body.destination_id);
+    const citizen_id = parseInt(req.query.citizen_id as string || req.body.citizen_id) || 1;
+
+    if (!destination_id || isNaN(destination_id)) {
+      return res.status(400).json({ error: 'destination_id is required' });
+    }
+
+    const dest = dbStore.tourismDestinations.find(d => d.id === destination_id);
+    if (!dest) {
+      return res.status(404).json({ error: 'Destination not found' });
+    }
+
+    // Check if already saved
+    const exists = dbStore.tourismSavedDestinations.find(s => s.citizen_id === citizen_id && s.destination_id === destination_id);
+    if (exists) {
+      return res.json(exists); // idempotent
+    }
+
+    const newSaved = {
+      id: dbStore.tourismSavedDestinations.length + 1,
+      citizen_id,
+      destination_id,
+      name: dest.name,
+      odia_name: dest.odia_name,
+      image_url: dest.image_url,
+      district: dest.district,
+      created_at: new Date().toISOString()
+    };
+    dbStore.tourismSavedDestinations.push(newSaved);
+    res.status(201).json(newSaved);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to save destination', detail: err.message });
+  }
+});
+
+// DELETE /api/tourism/saved-destinations/:destinationId — remove saved destination
+app.delete('/api/tourism/saved-destinations/:destinationId', (req: Request, res: Response) => {
+  try {
+    const destination_id = parseInt(req.params.destinationId);
+    const citizen_id = parseInt(req.query.citizen_id as string) || 1;
+
+    const idx = dbStore.tourismSavedDestinations.findIndex(
+      s => s.citizen_id === citizen_id && s.destination_id === destination_id
+    );
+
+    if (idx === -1) {
+      return res.status(404).json({ error: 'Saved destination not found' });
+    }
+
+    dbStore.tourismSavedDestinations.splice(idx, 1);
+    res.json({ message: 'Destination removed from saved list', destination_id });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to remove saved destination', detail: err.message });
+  }
+});
+
+// GET /api/tourism/itineraries — list itineraries for citizen
+app.get('/api/tourism/itineraries', (req: Request, res: Response) => {
+  try {
+    const citizen_id = parseInt(req.query.citizen_id as string) || 1;
+    const itineraries = dbStore.tourismItineraries.filter(i => !i.citizen_id || i.citizen_id === citizen_id);
+    res.json(itineraries);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to fetch itineraries', detail: err.message });
+  }
+});
+
+// POST /api/tourism/itineraries — save an itinerary
+app.post('/api/tourism/itineraries', (req: Request, res: Response) => {
+  try {
+    const { title, starting_location, duration_days, main_interest, travel_pace, require_accessibility, stops_data, summary, citizen_id } = req.body;
+    if (!title || !stops_data) {
+      return res.status(400).json({ error: 'title and stops_data are required' });
+    }
+    const newItinerary = {
+      id: dbStore.tourismItineraries.length + 1,
+      citizen_id: citizen_id || 1,
+      title,
+      starting_location: starting_location || 'Balasore',
+      duration_days: duration_days || 1,
+      main_interest: main_interest || 'MIXED',
+      travel_pace: travel_pace || 'BALANCED',
+      require_accessibility: Boolean(require_accessibility),
+      stops_data: stops_data || [],
+      summary: summary || '',
+      created_at: new Date().toISOString()
+    };
+    dbStore.tourismItineraries.push(newItinerary);
+    res.status(201).json(newItinerary);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to save itinerary', detail: err.message });
+  }
+});
+
+// DELETE /api/tourism/itineraries/:id — delete an itinerary
+app.delete('/api/tourism/itineraries/:id', (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    const idx = dbStore.tourismItineraries.findIndex(i => i.id === id);
+    if (idx === -1) {
+      return res.status(404).json({ error: 'Itinerary not found' });
+    }
+    dbStore.tourismItineraries.splice(idx, 1);
+    res.json({ message: 'Itinerary deleted', id });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to delete itinerary', detail: err.message });
+  }
+});
+
+// POST /api/tourism/ai-planner — generate AI itinerary using Gemini
+app.post('/api/tourism/ai-planner', async (req: Request, res: Response) => {
+  try {
+    const {
+      duration_days = 2,
+      interests = ['BEACHES_COAST'],
+      starting_location = 'Balasore',
+      travel_pace = 'BALANCED',
+      require_accessibility = false,
+      num_travellers = 2,
+      travel_style = 'FAMILY',
+      budget_range = 'MODERATE',
+      prompt = ''
+    } = req.body;
+
+    // Get available verified destinations
+    const availableDestinations = dbStore.tourismDestinations
+      .filter(d => d.verification_status === 'VERIFIED' && d.safety_status === 'OPEN')
+      .filter(d => !require_accessibility || d.accessibility_status !== 'NOT_ASSESSED');
+
+    // Filter by interests
+    let relevantDests = availableDestinations;
+    if (interests.length > 0 && !interests.includes('ALL')) {
+      relevantDests = availableDestinations.filter(d => interests.some((interest: string) => d.category === interest));
+      if (relevantDests.length < 2) {
+        relevantDests = availableDestinations; // fallback to all
+      }
+    }
+
+    const destContext = relevantDests.map(d =>
+      `${d.name} (${d.category}, ${d.district} district, Odisha): ${d.description.substring(0, 200)}. Timings: ${d.timings}. Best time: ${d.best_time_to_visit}. Visit duration: ${d.estimated_visit_duration}.`
+    ).join('\n');
+
+    const advisoryContext = dbStore.tourismAdvisories.map(a =>
+      `Advisory [${a.severity}]: ${a.title} — ${a.description}`
+    ).join('\n');
+
+    const plannerPrompt = prompt ?
+      `You are a verified Odisha tourism expert for Balasore district. A tourist asks: "${prompt}"
+      
+Available verified destinations in Balasore district, Odisha:
+${destContext}
+
+Current advisories:
+${advisoryContext}
+
+Respond with accurate, helpful tourism information. Do not invent destinations, prices, or opening hours not listed above. Only reference the verified destinations provided. If you cannot answer accurately, say so.` :
+      `You are a verified tourism planning assistant for Balasore district, Odisha, India. Create a ${duration_days}-day itinerary for ${num_travellers} travellers from ${starting_location}.
+
+Travel style: ${travel_style}
+Travel pace: ${travel_pace}
+Budget: ${budget_range}
+Interests: ${interests.join(', ')}
+Accessibility required: ${require_accessibility}
+
+Available verified destinations in Balasore district:
+${destContext}
+
+Current advisories to include in planning:
+${advisoryContext}
+
+Rules:
+1. ONLY suggest destinations from the verified list above.
+2. Include realistic travel times between locations.
+3. Include meal breaks and rest time.
+4. Mention any relevant advisories.
+5. Do NOT invent prices, hotel names, or opening hours.
+6. Format as a structured JSON with:
+   - itinerary_title: string
+   - summary: string (2-3 sentences)
+   - stops: array of { day, destination_name, activity, arrival_window, duration, travel_buffer, notes }
+   
+Respond ONLY with valid JSON.`;
+
+    if (!ai) {
+      // Return structured fallback without AI
+      const fallbackStops = relevantDests.slice(0, Math.min(duration_days * 2, relevantDests.length)).map((dest, idx) => ({
+        day: Math.floor(idx / 2) + 1,
+        destination_name: dest.name,
+        destination_id: dest.id,
+        district: dest.district,
+        activity: `Visit ${dest.name} — ${(dest.tagline || dest.description.substring(0, 100))}`,
+        arrival_window: idx % 2 === 0 ? '9:00 AM – 11:00 AM' : '2:00 PM – 4:00 PM',
+        duration: dest.estimated_visit_duration,
+        travel_buffer: '45 mins',
+        notes: dest.timings ? `Operating hours: ${dest.timings}` : undefined,
+        maps_url: dest.google_maps_url
+      }));
+
+      return res.json({
+        itinerary_title: `${duration_days}-Day ${starting_location} to Balasore Trip`,
+        summary: `A ${duration_days}-day journey through verified destinations in Balasore district, Odisha. Destinations sourced from official Odisha Tourism records. AI planning requires Gemini API configuration.`,
+        stops: fallbackStops,
+        ai_generated: false,
+        note: 'AI itinerary generation requires GEMINI_API_KEY configuration. This is a fallback suggestion from verified destination data.',
+        advisories: dbStore.tourismAdvisories
+      });
+    }
+
+    const model = ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: [{ role: 'user', parts: [{ text: plannerPrompt }] }],
+      config: { temperature: 0.3, maxOutputTokens: 2000 }
+    });
+
+    const result = await model;
+    const text = result.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    // Try to parse JSON response
+    let parsed: any = null;
+    try {
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsed = JSON.parse(jsonMatch[0]);
+      }
+    } catch {
+      // Non-JSON AI response (for companion chat mode)
+    }
+
+    if (parsed && parsed.stops) {
+      // Validate stops against known destinations
+      const validatedStops = parsed.stops.map((stop: any) => {
+        const knownDest = dbStore.tourismDestinations.find(d =>
+          d.name.toLowerCase().includes(stop.destination_name?.toLowerCase() || '') ||
+          (stop.destination_name || '').toLowerCase().includes(d.name.toLowerCase())
+        );
+        return {
+          ...stop,
+          destination_id: knownDest?.id,
+          district: knownDest?.district || 'Balasore',
+          maps_url: knownDest?.google_maps_url,
+        };
+      });
+
+      return res.json({
+        itinerary_title: parsed.itinerary_title || `${duration_days}-Day Balasore Itinerary`,
+        summary: parsed.summary || '',
+        stops: validatedStops,
+        ai_generated: true,
+        advisories: dbStore.tourismAdvisories
+      });
+    } else {
+      // Companion chat response
+      return res.json({
+        itinerary_title: 'Travel Information',
+        summary: text,
+        stops: [],
+        ai_generated: true,
+        is_chat_response: true
+      });
+    }
+  } catch (err: any) {
+    res.status(500).json({
+      error: 'Failed to generate itinerary',
+      detail: err.message,
+      note: 'Please check GEMINI_API_KEY configuration.'
+    });
+  }
+});
+
+// POST /api/tourism/content-corrections — submit data correction
+app.post('/api/tourism/content-corrections', (req: Request, res: Response) => {
+  try {
+    const { destination_id, reported_by_name, correction_type, description } = req.body;
+    if (!destination_id || !correction_type || !description) {
+      return res.status(400).json({ error: 'destination_id, correction_type, and description are required' });
+    }
+
+    const correction = {
+      id: dbStore.tourismContentCorrections.length + 1,
+      correction_code: `CORR-BLSR-${Date.now().toString().slice(-6)}`,
+      destination_id: parseInt(destination_id),
+      reported_by_name: reported_by_name || 'Anonymous Visitor',
+      correction_type,
+      description,
+      status: 'PENDING',
+      created_at: new Date().toISOString()
+    };
+    dbStore.tourismContentCorrections.push(correction);
+    addAuditLog('tourism-system', 'CORRECTION_SUBMITTED', `DESTINATION:${destination_id}`, `Correction type: ${correction_type} — ${description.substring(0, 100)}`);
+    res.status(201).json(correction);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to submit correction', detail: err.message });
+  }
+});
+
+// POST /api/tourism/assistance — tourist emergency/assistance request
+app.post('/api/tourism/assistance', (req: Request, res: Response) => {
+  try {
+    const { requester_name, requester_phone, category, description, location_name, latitude, longitude, destination_id } = req.body;
+    if (!category || !description) {
+      return res.status(400).json({ error: 'category and description are required' });
+    }
+
+    // Create a linked incident in the main incident system for emergency categories
+    let incident_id: number | undefined;
+    if (['MEDICAL', 'ACCIDENT', 'FIRE', 'SAFETY'].includes(category)) {
+      const newIncident = {
+        id: dbStore.incidents.length + 1,
+        incident_code: `INC-TOUR-${Date.now().toString().slice(-6)}`,
+        title: `Tourist Assistance: ${category} at ${location_name || 'Balasore District'}`,
+        category: 'Tourist Emergency',
+        description: `Tourist assistance request — ${category}: ${description}`,
+        severity: category === 'MEDICAL' || category === 'ACCIDENT' ? 'HIGH' as const : 'MEDIUM' as const,
+        status: 'REPORTED' as const,
+        address: location_name || 'Balasore District, Odisha',
+        latitude: latitude || 21.4563,
+        longitude: longitude || 87.017,
+        is_verified: false,
+        priority_score: category === 'MEDICAL' ? 85 : 65,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      dbStore.incidents.push(newIncident);
+      incident_id = newIncident.id;
+
+      publishEvent({
+        eventType: 'incident.created',
+        incidentId: newIncident.id,
+        actorUserId: 'tourism-platform',
+        eventPayload: { title: newIncident.title, category, severity: newIncident.severity }
+      });
+    }
+
+    const requestCode = `TOUR-ASST-${Date.now().toString().slice(-6)}`;
+    const assistanceRequest = {
+      id: dbStore.tourismAssistanceRequests.length + 1,
+      request_code: requestCode,
+      requester_name: requester_name || 'Tourist',
+      requester_phone: requester_phone || undefined,
+      category,
+      description,
+      location_name: location_name || undefined,
+      latitude: latitude || undefined,
+      longitude: longitude || undefined,
+      destination_id: destination_id ? parseInt(destination_id) : undefined,
+      incident_id,
+      status: 'SUBMITTED',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    dbStore.tourismAssistanceRequests.push(assistanceRequest);
+
+    addAuditLog('tourism-system', 'ASSISTANCE_REQUEST', `TOUR:${requestCode}`, `Tourist assistance — ${category} at ${location_name || 'unknown'}`);
+
+    res.status(201).json({
+      ...assistanceRequest,
+      incident_id,
+      message: ['MEDICAL', 'ACCIDENT', 'FIRE', 'SAFETY'].includes(category)
+        ? `Emergency request ${requestCode} submitted. Linked to incident ${incident_id ? `INC-${incident_id}` : 'pending'}. Emergency personnel will be notified.`
+        : `Assistance request ${requestCode} submitted. The tourism desk will respond shortly.`
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to submit assistance request', detail: err.message });
+  }
+});
+
+// GET /api/tourism/assistance/:id — get assistance request status
+app.get('/api/tourism/assistance/:id', (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    const request = dbStore.tourismAssistanceRequests.find(r => r.id === id);
+    if (!request) {
+      return res.status(404).json({ error: 'Assistance request not found' });
+    }
+    res.json(request);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to fetch assistance request', detail: err.message });
+  }
+});
+
+// GET /api/tourism/weather — weather for Balasore (requires WEATHER_API_KEY)
+app.get('/api/tourism/weather', async (_req: Request, res: Response) => {
+  const weatherApiKey = process.env.WEATHER_API_KEY;
+
+  if (!weatherApiKey) {
+    return res.json({
+      available: false,
+      message: 'Weather data requires WEATHER_API_KEY configuration. Configure OpenWeatherMap API key to enable live weather.',
+      location: 'Balasore, Odisha, India',
+      lat: 21.4927,
+      lng: 86.9315,
+      note: 'This is not fabricated weather data. Real weather data requires an API key.'
+    });
+  }
+
+  try {
+    const weatherRes = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=21.4927&lon=86.9315&appid=${weatherApiKey}&units=metric`);
+    if (!weatherRes.ok) {
+      throw new Error(`Weather API responded with ${weatherRes.status}`);
+    }
+    const weather = await weatherRes.json();
+    res.json({
+      available: true,
+      location: 'Balasore, Odisha, India',
+      temperature_c: Math.round(weather.main?.temp),
+      feels_like_c: Math.round(weather.main?.feels_like),
+      humidity_percent: weather.main?.humidity,
+      description: weather.weather?.[0]?.description,
+      wind_speed_kmh: Math.round((weather.wind?.speed || 0) * 3.6),
+      rainfall_mm_1h: weather.rain?.['1h'] || 0,
+      icon: weather.weather?.[0]?.icon,
+      source: 'OpenWeatherMap API',
+      last_updated: new Date().toISOString()
+    });
+  } catch (err: any) {
+    res.json({
+      available: false,
+      message: 'Weather service temporarily unavailable.',
+      detail: err.message
+    });
+  }
+});
+// GET /api/tourism/accommodations — hotels, OTDC panthanivas, eco lodges
+app.get('/api/tourism/accommodations', (req: Request, res: Response) => {
+  const { destination_id, category } = req.query;
+  let items = (dbStore as any).tourismAccommodations || [];
+  if (destination_id) {
+    items = items.filter((a: any) => a.destination_id === Number(destination_id));
+  }
+  if (category && category !== 'ALL') {
+    items = items.filter((a: any) => a.category === category);
+  }
+  res.json(items);
+});
+
+// GET /api/tourism/dining — authentic local cuisine & seafood restaurants
+app.get('/api/tourism/dining', (req: Request, res: Response) => {
+  const { destination_id } = req.query;
+  let items = (dbStore as any).tourismDining || [];
+  if (destination_id) {
+    items = items.filter((d: any) => d.destination_id === Number(destination_id));
+  }
+  res.json(items);
+});
+
+// GET /api/tourism/travel-conditions — live coastal tides, weather, highway transit status
+app.get('/api/tourism/travel-conditions', (_req: Request, res: Response) => {
+  res.json((dbStore as any).tourismTravelConditions || []);
+});
+
+// GET /api/tourism/emergency-contacts — tourist police, marine police, medical, coastal rescue
+app.get('/api/tourism/emergency-contacts', (_req: Request, res: Response) => {
+  res.json((dbStore as any).tourismEmergencyContacts || []);
+});
+
+// ── ADMIN TOURISM MANAGEMENT ROUTES ──────────────────────────────────────────
+
+// GET /api/admin/tourism/destinations — admin list all destinations
+app.get('/api/admin/tourism/destinations', (_req: Request, res: Response) => {
+  res.json({
+    destinations: dbStore.tourismDestinations,
+    total: dbStore.tourismDestinations.length,
+    pending_corrections: dbStore.tourismContentCorrections.filter(c => c.status === 'PENDING').length,
+    assistance_requests: dbStore.tourismAssistanceRequests.length
+  });
+});
+
+// POST /api/admin/tourism/destinations — add new destination
+app.post('/api/admin/tourism/destinations', (req: Request, res: Response) => {
+  try {
+    const { name, odia_name, category, district, state, description, latitude, longitude, timings, entry_fee, official_source, verification_status } = req.body;
+    if (!name || !category || !description || !latitude || !longitude) {
+      return res.status(400).json({ error: 'name, category, description, latitude, longitude are required' });
+    }
+    const newDest = {
+      id: dbStore.tourismDestinations.length + 1,
+      destination_code: `BLSR-DEST-${String(dbStore.tourismDestinations.length + 1).padStart(3, '0')}`,
+      name,
+      odia_name: odia_name || '',
+      category,
+      district: district || 'Balasore',
+      state: state || 'Odisha',
+      description,
+      latitude: parseFloat(latitude),
+      longitude: parseFloat(longitude),
+      formatted_address: req.body.formatted_address || `${district || 'Balasore'} District, Odisha, India`,
+      gallery_urls: req.body.gallery_urls || [],
+      timings: timings || 'Check with local authority',
+      entry_fee: entry_fee || 'Not available',
+      estimated_visit_duration: req.body.estimated_visit_duration || 'Not available',
+      best_time_to_visit: req.body.best_time_to_visit || 'October to March',
+      nearest_airport: req.body.nearest_airport || 'Biju Patnaik International Airport, Bhubaneswar',
+      accessibility_status: req.body.accessibility_status || 'NOT_ASSESSED',
+      facilities: req.body.facilities || {},
+      rating: req.body.rating || 0,
+      review_count: req.body.review_count || 0,
+      safety_status: req.body.safety_status || 'OPEN',
+      is_featured: Boolean(req.body.is_featured),
+      is_inside_balasore_district: req.body.is_inside_balasore_district !== false,
+      verification_status: verification_status || 'PENDING_VERIFICATION',
+      official_source: official_source || 'Not specified',
+      last_verified_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    dbStore.tourismDestinations.push(newDest);
+    addAuditLog('admin@civicnexus.gov.in', 'DESTINATION_ADDED', `TOURISM:${newDest.destination_code}`, `New destination: ${name}`);
+    res.status(201).json(newDest);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to add destination', detail: err.message });
+  }
+});
+
+// PATCH /api/admin/tourism/destinations/:id — edit destination
+app.patch('/api/admin/tourism/destinations/:id', (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    const dest = dbStore.tourismDestinations.find(d => d.id === id);
+    if (!dest) {
+      return res.status(404).json({ error: 'Destination not found' });
+    }
+    const allowed = ['name', 'odia_name', 'description', 'timings', 'entry_fee', 'safety_status', 'is_featured', 'verification_status', 'official_source', 'tagline', 'best_time_to_visit', 'accessibility_status', 'visitor_rules'];
+    allowed.forEach(field => {
+      if (req.body[field] !== undefined) {
+        (dest as any)[field] = req.body[field];
+      }
+    });
+    dest.updated_at = new Date().toISOString();
+    addAuditLog('admin@civicnexus.gov.in', 'DESTINATION_UPDATED', `TOURISM:${dest.destination_code}`, `Updated fields: ${Object.keys(req.body).join(', ')}`);
+    res.json(dest);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to update destination', detail: err.message });
+  }
+});
+
+// POST /api/admin/tourism/destinations/:id/verify — mark as verified
+app.post('/api/admin/tourism/destinations/:id/verify', (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    const dest = dbStore.tourismDestinations.find(d => d.id === id);
+    if (!dest) {
+      return res.status(404).json({ error: 'Destination not found' });
+    }
+    dest.verification_status = 'VERIFIED';
+    dest.last_verified_at = new Date().toISOString();
+    dest.updated_at = new Date().toISOString();
+    addAuditLog('admin@civicnexus.gov.in', 'DESTINATION_VERIFIED', `TOURISM:${dest.destination_code}`, `Verified by admin. Source: ${req.body.source || 'Manual verification'}`);
+    res.json({ message: `Destination "${dest.name}" marked as VERIFIED`, destination: dest });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to verify destination', detail: err.message });
+  }
+});
+
+// GET /api/admin/tourism/corrections — list pending corrections
+app.get('/api/admin/tourism/corrections', (_req: Request, res: Response) => {
+  res.json(dbStore.tourismContentCorrections);
+});
+
+// PATCH /api/admin/tourism/corrections/:id — update correction status
+app.patch('/api/admin/tourism/corrections/:id', (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    const correction = dbStore.tourismContentCorrections.find(c => c.id === id);
+    if (!correction) {
+      return res.status(404).json({ error: 'Correction not found' });
+    }
+    if (req.body.status) correction.status = req.body.status;
+    res.json(correction);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to update correction', detail: err.message });
+  }
+});
+
+// GET /api/admin/tourism/analytics — tourism analytics from real data
+app.get('/api/admin/tourism/analytics', (_req: Request, res: Response) => {
+  const destinations = dbStore.tourismDestinations;
+  res.json({
+    total_destinations: destinations.length,
+    verified_destinations: destinations.filter(d => d.verification_status === 'VERIFIED').length,
+    pending_verification: destinations.filter(d => d.verification_status === 'PENDING_VERIFICATION').length,
+    featured_destinations: destinations.filter(d => d.is_featured).length,
+    inside_balasore_district: destinations.filter(d => d.is_inside_balasore_district).length,
+    total_events: dbStore.tourismEvents.length,
+    active_advisories: dbStore.tourismAdvisories.length,
+    heritage_trails: dbStore.heritageTrails.length,
+    saved_destinations_count: dbStore.tourismSavedDestinations.length,
+    itineraries_created: dbStore.tourismItineraries.length,
+    assistance_requests: dbStore.tourismAssistanceRequests.length,
+    pending_corrections: dbStore.tourismContentCorrections.filter(c => c.status === 'PENDING').length,
+    by_category: Object.entries(
+      destinations.reduce((acc, d) => {
+        acc[d.category] = (acc[d.category] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>)
+    ).map(([category, count]) => ({ category, count })),
+    top_rated: destinations
+      .filter(d => d.review_count > 0)
+      .sort((a, b) => b.rating - a.rating)
+      .slice(0, 3)
+      .map(d => ({ name: d.name, rating: d.rating, review_count: d.review_count })),
+    data_source: 'Live database — all metrics from real records',
+    generated_at: new Date().toISOString()
+  });
+});
+
+// Maintain legacy /api/v1/tourism for backwards compatibility with TourismView
+app.get('/api/v1/tourism', (_req: Request, res: Response) => {
+  res.json(dbStore.tourismPlaces);
 });
 
 // ==========================================

@@ -26,7 +26,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [token, setToken] = useState<string | null>(localStorage.getItem('civic_token'));
   const [user, setUser] = useState<User | null>(null);
-  const [language, setLanguage] = useState<'en' | 'or'>('en');
+  const [language] = useState<'en' | 'or'>('en');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [toast, setToast] = useState<{ message: string; type: 'info' | 'success' | 'alert' | 'error' } | null>(null);
@@ -120,7 +120,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const toggleLanguage = () => {
-    setLanguage(prev => (prev === 'en' ? 'or' : 'en'));
+    // English is the designated primary and sole interface language
   };
 
   const toggleTheme = () => {

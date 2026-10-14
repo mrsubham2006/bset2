@@ -186,12 +186,10 @@ export const RoleSwitcherModal: React.FC<RoleSwitcherModalProps> = ({ isOpen, on
             <KonarkWheelIcon size={32} className="text-heritage-gold" />
             <div>
               <h3 className="font-serif font-bold text-lg text-white">
-                {language === 'en' ? "Demonstration Role Switcher (11 Persona Access)" : "୧୧ ପ୍ରଶାସନିକ ଭୂମିକା ପରିବର୍ତ୍ତନ କେନ୍ଦ୍ର"}
+                Demonstration Role Switcher (11 Persona Access)
               </h3>
               <p className="text-xs text-heritage-stone/80 font-sans">
-                {language === 'en'
-                  ? "Explore Civic Nexus AI from any authenticated citizen or government stakeholder perspective."
-                  : "ପ୍ରତ୍ୟେକ ପ୍ରାଧିକୃତ ସରକାରୀ ଓ ନାଗରିକ ଦୃଷ୍ଟିକୋଣରୁ ଅନୁଭବ କରନ୍ତୁ।"}
+                Explore Civic Nexus AI from any authenticated citizen or government stakeholder perspective.
               </p>
             </div>
           </div>
@@ -231,7 +229,7 @@ export const RoleSwitcherModal: React.FC<RoleSwitcherModalProps> = ({ isOpen, on
                     )}
                   </div>
                   <h4 className="font-bold text-sm text-heritage-charcoal dark:text-heritage-ivory">
-                    {language === 'en' ? item.titleEn : item.titleOr}
+                    {item.titleEn}
                   </h4>
                   <p className="text-xs font-semibold text-heritage-maroon dark:text-heritage-gold mt-0.5">
                     {item.person}

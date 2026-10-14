@@ -53,7 +53,13 @@ import {
   RadioTower,
   BellRing,
   ChevronDown,
-  Volume1
+  Volume1,
+  ChevronLeft,
+  BarChart3,
+  Settings,
+  AlertCircle,
+  Compass,
+  Menu
 } from 'lucide-react';
 import { PanelRoleAuth } from '../components/PanelRoleAuth';
 import { VideoIntelligencePanel } from '../components/VideoIntelligencePanel';
@@ -165,8 +171,38 @@ export const EmergencyResponseView: React.FC<EmergencyResponseViewProps> = ({ on
   const [manualSosNotes, setManualSosNotes] = useState<string>('Distress 112 call logged by EOC Operator. High-velocity collision.');
   const [creatingSos, setCreatingSos] = useState<boolean>(false);
 
-  // Active View Tab - Defaults to AI Video Emergency Analyzer
-  const [activeTab, setActiveTab] = useState<'VIDEO_INTEL' | 'DASHBOARD' | 'CCTV' | 'ALERTS' | 'MAP' | 'DISPATCH' | 'AI_INTEL' | 'TESTS'>('VIDEO_INTEL');
+  // Active View Tab - Supported Navigation Keys
+  type EmergencyNavKey = 'OVERVIEW' | 'VIDEO_INTEL' | 'ACTIVE_EMERGENCIES' | 'MAP' | 'DISPATCH' | 'EVIDENCE' | 'TRACKING' | 'ALERTS' | 'ANALYTICS' | 'CONFIG' | 'DASHBOARD' | 'CCTV' | 'AI_INTEL' | 'TESTS';
+  const [activeTab, setActiveTab] = useState<EmergencyNavKey>('VIDEO_INTEL');
+  const [tabHistory, setTabHistory] = useState<EmergencyNavKey[]>(['VIDEO_INTEL']);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
+
+  // Switch tab and record 1-step history
+  const switchTab = (nextTab: EmergencyNavKey) => {
+    setActiveTab((current) => {
+      if (current !== nextTab) {
+        setTabHistory((prev) => [...prev, nextTab]);
+      }
+      return nextTab;
+    });
+  };
+
+  // 1-step back handler inside Emergency portal
+  const handleEmergencyBack = () => {
+    setTabHistory((prev) => {
+      if (prev.length <= 1) {
+        // No more sub-tabs in history, go back 1 level to previous portal view
+        if (onNavigateHome) onNavigateHome();
+        return ['VIDEO_INTEL'];
+      }
+      const newHistory = [...prev];
+      newHistory.pop(); // Remove current tab
+      const previousTab = newHistory[newHistory.length - 1] || 'VIDEO_INTEL';
+      setActiveTab(previousTab);
+      return newHistory;
+    });
+  };
 
   // Data States
   const [overview, setOverview] = useState<EmergencyOverviewStats>({
@@ -353,7 +389,7 @@ export const EmergencyResponseView: React.FC<EmergencyResponseViewProps> = ({ on
     }
   };
 
-  const triggerAudioSiren = (overrideMode?: 'AMBULANCE_HILO' | 'POLICE_WAIL' | 'RAPID_YELP') => {
+  const triggerAudioSiren = (overrideMode?: SirenSoundType) => {
     if (audioMuted) {
       setAudioMuted(false);
       showToast('Emergency audio unmuted', 'info');
@@ -700,12 +736,12 @@ export const EmergencyResponseView: React.FC<EmergencyResponseViewProps> = ({ on
   const selectedCam = (cameras && cameras.length > 0 ? (cameras.find(c => c.id === selectedCameraId) || cameras[0]) : null) || defaultCam;
 
   return (
-    <div className="min-h-screen bg-heritage-ivory dark:bg-heritage-charcoal-dark text-heritage-charcoal dark:text-heritage-ivory transition-colors flex flex-col pb-16">
+    <div className="min-h-screen w-full bg-heritage-ivory dark:bg-heritage-charcoal-dark text-heritage-charcoal dark:text-heritage-ivory transition-colors flex flex-col pb-16">
       
       {/* ── 1. PERSISTENT EMERGENCY ALERT BANNER (Flashing if unacknowledged critical) ── */}
       {unacknowledgedCritical && (
-        <div className="sticky top-16 z-30 bg-gradient-to-r from-red-600 via-rose-700 to-red-600 text-white px-4 py-3 shadow-lg border-b-2 border-amber-300 animate-pulse">
-          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+        <div className="sticky top-16 z-30 w-full bg-gradient-to-r from-red-600 via-rose-700 to-red-600 text-white px-4 sm:px-6 py-3 shadow-lg border-b-2 border-amber-300 animate-pulse">
+          <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
             <div className="flex items-center space-x-3">
               <div className="p-1.5 rounded-lg bg-black/30 border border-white/30 text-amber-300">
                 <Siren className="w-5 h-5 animate-spin" />
@@ -749,11 +785,21 @@ export const EmergencyResponseView: React.FC<EmergencyResponseViewProps> = ({ on
       )}
 
       {/* ── 2. STREAMLINED USER-FRIENDLY EOC STATUS BAR ────────────────────── */}
-      <header className="bg-slate-950 text-slate-100 border-b border-slate-800 px-4 sm:px-6 py-3.5 shadow-md">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <header className="w-full bg-slate-950 text-slate-100 border-b border-slate-800 px-3 sm:px-6 py-3.5 shadow-md sticky top-0 z-40">
+        <div className="w-full flex flex-col md:flex-row md:items-center justify-between gap-4">
           
-          {/* Logo & Clean Title */}
+          {/* Logo & Mobile Menu Toggle */}
           <div className="flex items-center space-x-3.5">
+            {/* Mobile Hamburger Button */}
+            <button
+              onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+              className="md:hidden p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 transition"
+              title="Toggle Emergency Navigation"
+              aria-label="Toggle navigation"
+            >
+              <Menu className="w-5 h-5 text-amber-400" />
+            </button>
+
             <div className="p-2.5 rounded-2xl bg-gradient-to-br from-red-600 to-rose-700 border border-red-500/60 text-white shadow-lg shadow-red-950/50">
               <Flame className="w-5 h-5 text-amber-300" />
             </div>
@@ -825,99 +871,405 @@ export const EmergencyResponseView: React.FC<EmergencyResponseViewProps> = ({ on
               <span>Test Alarm</span>
             </button>
 
-            {/* Return to Portal Button */}
-            {onNavigateHome && (
-              <button
-                onClick={onNavigateHome}
-                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition text-xs font-semibold"
-                title="Return to Main Portal"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Main Portal</span>
-              </button>
-            )}
+            {/* Return / Step-by-Step Back Button (Back Arrow) */}
+            <button
+              onClick={handleEmergencyBack}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition text-xs font-semibold group"
+              title="Go 1 Step Back"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-amber-400 transition-transform group-hover:-translate-x-0.5" />
+              <span>Back (1 Step)</span>
+            </button>
           </div>
 
         </div>
       </header>
 
-      {/* ── 3. CLEAN USER-FRIENDLY NAVIGATION TABS (4 Clear Functional Modes) ── */}
-      <nav className="max-w-7xl mx-auto px-4 sm:px-6 pt-5 w-full">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-1.5 rounded-3xl bg-slate-950 border border-slate-800 shadow-xl">
-          
-          {/* Tab 1: AI Video Emergency Analyzer (Hero Feature) */}
-          <button
-            id="tab-video-intel"
-            onClick={() => setActiveTab('VIDEO_INTEL')}
-            className={`p-3.5 rounded-2xl transition-all flex items-center justify-center space-x-2.5 text-xs font-bold ${
-              activeTab === 'VIDEO_INTEL'
-                ? 'bg-gradient-to-r from-red-600 via-rose-700 to-red-600 text-white shadow-xl shadow-red-950/70 ring-1 ring-amber-400/50'
-                : 'text-slate-400 hover:text-white hover:bg-slate-900/80'
-            }`}
-          >
-            <Video className="w-5 h-5 text-amber-300 shrink-0" />
-            <div className="text-left">
-              <span className="block font-serif font-bold text-sm leading-none">1. AI Video Analyzer</span>
-              <span className="text-[10px] opacity-80 font-normal">वीडियो इंटेलिजेंस व SOS</span>
-            </div>
-          </button>
-
-          {/* Tab 2: Live Operations & CCTV */}
-          <button
-            onClick={() => setActiveTab('DASHBOARD')}
-            className={`p-3.5 rounded-2xl transition-all flex items-center justify-center space-x-2.5 text-xs font-bold ${
-              activeTab === 'DASHBOARD' || activeTab === 'CCTV' || activeTab === 'ALERTS' || activeTab === 'DISPATCH'
-                ? 'bg-slate-800 text-white shadow-xl ring-1 ring-slate-700'
-                : 'text-slate-400 hover:text-white hover:bg-slate-900/80'
-            }`}
-          >
-            <Activity className="w-5 h-5 text-cyan-400 shrink-0" />
-            <div className="text-left">
-              <span className="block font-serif font-bold text-sm leading-none">2. Live Operations &amp; CCTV</span>
-              <span className="text-[10px] opacity-80 font-normal">अलर्ट व कंट्रोल डेस्क ({alerts.length})</span>
-            </div>
-          </button>
-
-          {/* Tab 3: Live Map & Fleet */}
-          <button
-            onClick={() => setActiveTab('MAP')}
-            className={`p-3.5 rounded-2xl transition-all flex items-center justify-center space-x-2.5 text-xs font-bold ${
-              activeTab === 'MAP'
-                ? 'bg-slate-800 text-white shadow-xl ring-1 ring-slate-700'
-                : 'text-slate-400 hover:text-white hover:bg-slate-900/80'
-            }`}
-          >
-            <Navigation className="w-5 h-5 text-emerald-400 shrink-0" />
-            <div className="text-left">
-              <span className="block font-serif font-bold text-sm leading-none">3. City Map &amp; Fleet</span>
-              <span className="text-[10px] opacity-80 font-normal">एम्बुलेंस GPS व अस्पताल</span>
-            </div>
-          </button>
-
-          {/* Tab 4: Diagnostics, 10 KPIs & Acceptance Tests */}
-          <button
-            onClick={() => setActiveTab('TESTS')}
-            className={`p-3.5 rounded-2xl transition-all flex items-center justify-center space-x-2.5 text-xs font-bold ${
-              activeTab === 'TESTS'
-                ? 'bg-indigo-700 text-white shadow-xl ring-1 ring-indigo-500'
-                : 'text-slate-400 hover:text-white hover:bg-slate-900/80'
-            }`}
-          >
-            <ShieldCheck className="w-5 h-5 text-amber-300 shrink-0" />
-            <div className="text-left">
-              <span className="block font-serif font-bold text-sm leading-none">4. System Stats &amp; Tests</span>
-              <span className="text-[10px] opacity-80 font-normal">10 KPI कार्ड्स व 12 टेस्ट्स</span>
-            </div>
-          </button>
-
-        </div>
-      </nav>
-
-      {/* ── 6. MAIN WORKSPACE CONTENT ────────────────────────────────────────── */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-5 w-full flex-1">
+      {/* ── 3. EOC WORKSPACE WITH RESPONSIVE COLLAPSIBLE SIDEBAR ────────────────── */}
+      <div className="flex-1 flex w-full px-2 sm:px-4 lg:px-5 pt-3 gap-3 sm:gap-4 relative">
         
-        {/* ── TAB: DASHBOARD OVERVIEW ───────────────────────────────────────── */}
-        {activeTab === 'DASHBOARD' && (
+        {/* Mobile Backdrop Overlay */}
+        {mobileSidebarOpen && (
+          <div
+            onClick={() => setMobileSidebarOpen(false)}
+            className="md:hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm transition-opacity"
+          />
+        )}
+
+        {/* ── COLLAPSIBLE EMERGENCY SIDEBAR ── */}
+        <aside
+          className={`
+            fixed md:sticky top-20 z-40 md:z-20
+            h-[calc(100vh-6rem)]
+            transition-all duration-300 ease-in-out
+            bg-slate-950/95 backdrop-blur-md
+            border border-slate-800/90
+            rounded-3xl shadow-2xl flex flex-col
+            ${sidebarCollapsed ? 'w-20' : 'w-72'}
+            ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-[120%] md:translate-x-0'}
+            p-3 shrink-0 select-none
+          `}
+          style={{
+            boxShadow: '0 10px 40px -10px rgba(0,0,0,0.7), inset 0 1px 0 0 rgba(255,255,255,0.05)'
+          }}
+        >
+          {/* Sidebar Header & Collapse Toggle */}
+          <div className="flex items-center justify-between px-2 py-2 border-b border-slate-800/80 mb-2">
+            {!sidebarCollapsed ? (
+              <div className="flex items-center space-x-2 overflow-hidden">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping shrink-0" />
+                <span className="font-serif font-bold text-xs uppercase tracking-wider text-slate-300 truncate">
+                  Command Ops Hub
+                </span>
+              </div>
+            ) : (
+              <div className="mx-auto">
+                <Flame className="w-5 h-5 text-amber-400" />
+              </div>
+            )}
+            
+            {/* Collapse toggle (desktop) */}
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="hidden md:flex p-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-amber-400 border border-slate-800 transition"
+              title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+              aria-label="Toggle sidebar collapse"
+            >
+              {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+            </button>
+
+            {/* Mobile close button */}
+            <button
+              onClick={() => setMobileSidebarOpen(false)}
+              className="md:hidden p-1.5 rounded-xl bg-slate-900 text-slate-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Sidebar Scrollable Navigation Groups */}
+          <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin scrollbar-thumb-slate-800">
+            
+            {/* GROUP 1: COMMAND */}
+            <div className="space-y-1">
+              {!sidebarCollapsed && (
+                <div className="px-2.5 text-[10px] font-mono font-bold uppercase tracking-wider text-amber-400/90 flex items-center justify-between">
+                  <span>COMMAND</span>
+                  <span className="text-[9px] text-slate-500 font-sans">Control</span>
+                </div>
+              )}
+              
+              {/* Emergency Overview */}
+              <button
+                id="sidebar-nav-overview"
+                onClick={() => {
+                  switchTab('OVERVIEW');
+                  setMobileSidebarOpen(false);
+                }}
+                title={sidebarCollapsed ? 'Emergency Overview' : undefined}
+                className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center p-3' : 'px-3 py-2.5'} rounded-2xl text-xs font-bold transition-all group relative ${
+                  activeTab === 'OVERVIEW' || activeTab === 'DASHBOARD'
+                    ? 'bg-gradient-to-r from-red-600 via-rose-700 to-red-600 text-white shadow-lg shadow-red-950/60 border border-amber-400/40'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-900/80 border border-transparent'
+                }`}
+              >
+                <Activity className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${activeTab === 'OVERVIEW' || activeTab === 'DASHBOARD' ? 'text-amber-300' : 'text-rose-400'}`} />
+                {!sidebarCollapsed && (
+                  <div className="ml-3 text-left min-w-0 flex-1">
+                    <span className="block truncate font-serif font-bold text-[13px] leading-tight">Emergency Overview</span>
+                    <span className="text-[10px] opacity-75 font-normal block truncate">Operations &amp; Live Monitoring</span>
+                  </div>
+                )}
+                {/* Tooltip for collapsed mode */}
+                {sidebarCollapsed && (
+                  <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 border border-slate-700 text-white text-[11px] font-semibold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition whitespace-nowrap z-50">
+                    Emergency Overview
+                  </div>
+                )}
+              </button>
+
+              {/* Active Emergencies */}
+              <button
+                id="sidebar-nav-active-emergencies"
+                onClick={() => {
+                  switchTab('ACTIVE_EMERGENCIES');
+                  setMobileSidebarOpen(false);
+                }}
+                title={sidebarCollapsed ? 'Active Emergencies' : undefined}
+                className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center p-3' : 'px-3 py-2.5'} rounded-2xl text-xs font-bold transition-all group relative ${
+                  activeTab === 'ACTIVE_EMERGENCIES'
+                    ? 'bg-gradient-to-r from-red-600 via-rose-700 to-red-600 text-white shadow-lg shadow-red-950/60 border border-amber-400/40'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-900/80 border border-transparent'
+                }`}
+              >
+                <AlertCircle className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${activeTab === 'ACTIVE_EMERGENCIES' ? 'text-amber-300' : 'text-red-400'}`} />
+                {!sidebarCollapsed && (
+                  <div className="ml-3 text-left min-w-0 flex-1 flex items-center justify-between">
+                    <div>
+                      <span className="block truncate font-serif font-bold text-[13px] leading-tight">Active Emergencies</span>
+                      <span className="text-[10px] opacity-75 font-normal block truncate">Active Incidents &amp; Triage</span>
+                    </div>
+                    {(stats.activeEmergencyAlerts || alerts.length) > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-red-950 border border-red-500 text-red-200">
+                        {stats.activeEmergencyAlerts || alerts.length}
+                      </span>
+                    )}
+                  </div>
+                )}
+                {sidebarCollapsed && (
+                  <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 border border-slate-700 text-white text-[11px] font-semibold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition whitespace-nowrap z-50">
+                    Active Emergencies ({stats.activeEmergencyAlerts || alerts.length})
+                  </div>
+                )}
+              </button>
+
+              {/* Live Incident Map */}
+              <button
+                id="sidebar-nav-map"
+                onClick={() => {
+                  switchTab('MAP');
+                  setMobileSidebarOpen(false);
+                }}
+                title={sidebarCollapsed ? 'Live Incident Map' : undefined}
+                className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center p-3' : 'px-3 py-2.5'} rounded-2xl text-xs font-bold transition-all group relative ${
+                  activeTab === 'MAP'
+                    ? 'bg-gradient-to-r from-red-600 via-rose-700 to-red-600 text-white shadow-lg shadow-red-950/60 border border-amber-400/40'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-900/80 border border-transparent'
+                }`}
+              >
+                <Compass className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${activeTab === 'MAP' ? 'text-amber-300' : 'text-emerald-400'}`} />
+                {!sidebarCollapsed && (
+                  <div className="ml-3 text-left min-w-0 flex-1">
+                    <span className="block truncate font-serif font-bold text-[13px] leading-tight">Live Incident Map</span>
+                    <span className="text-[10px] opacity-75 font-normal block truncate">GIS Map &amp; Green Corridors</span>
+                  </div>
+                )}
+                {sidebarCollapsed && (
+                  <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 border border-slate-700 text-white text-[11px] font-semibold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition whitespace-nowrap z-50">
+                    Live Incident Map
+                  </div>
+                )}
+              </button>
+            </div>
+
+            {/* GROUP 2: OPERATIONS */}
+            <div className="space-y-1">
+              {!sidebarCollapsed && (
+                <div className="px-2.5 text-[10px] font-mono font-bold uppercase tracking-wider text-cyan-400/90 flex items-center justify-between">
+                  <span>OPERATIONS</span>
+                  <span className="text-[9px] text-slate-500 font-sans">Units</span>
+                </div>
+              )}
+
+              {/* Response Teams & Dispatch */}
+              <button
+                id="sidebar-nav-dispatch"
+                onClick={() => {
+                  switchTab('DISPATCH');
+                  setMobileSidebarOpen(false);
+                }}
+                title={sidebarCollapsed ? 'Response Teams & Dispatch' : undefined}
+                className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center p-3' : 'px-3 py-2.5'} rounded-2xl text-xs font-bold transition-all group relative ${
+                  activeTab === 'DISPATCH'
+                    ? 'bg-gradient-to-r from-red-600 via-rose-700 to-red-600 text-white shadow-lg shadow-red-950/60 border border-amber-400/40'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-900/80 border border-transparent'
+                }`}
+              >
+                <Truck className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${activeTab === 'DISPATCH' ? 'text-amber-300' : 'text-amber-400'}`} />
+                {!sidebarCollapsed && (
+                  <div className="ml-3 text-left min-w-0 flex-1">
+                    <span className="block truncate font-serif font-bold text-[13px] leading-tight">Response Teams &amp; Dispatch</span>
+                    <span className="text-[10px] opacity-75 font-normal block truncate">108 Ambulances &amp; Fire Brigades</span>
+                  </div>
+                )}
+                {sidebarCollapsed && (
+                  <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 border border-slate-700 text-white text-[11px] font-semibold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition whitespace-nowrap z-50">
+                    Response Teams &amp; Dispatch
+                  </div>
+                )}
+              </button>
+
+              {/* AI Detection & Evidence (Video Intelligence Hero) */}
+              <button
+                id="sidebar-nav-evidence"
+                onClick={() => {
+                  switchTab('VIDEO_INTEL');
+                  setMobileSidebarOpen(false);
+                }}
+                title={sidebarCollapsed ? 'AI Detection & Evidence' : undefined}
+                className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center p-3' : 'px-3 py-2.5'} rounded-2xl text-xs font-bold transition-all group relative ${
+                  activeTab === 'VIDEO_INTEL' || activeTab === 'EVIDENCE'
+                    ? 'bg-gradient-to-r from-red-600 via-rose-700 to-red-600 text-white shadow-lg shadow-red-950/60 border border-amber-400/40'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-900/80 border border-transparent'
+                }`}
+              >
+                <Video className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${activeTab === 'VIDEO_INTEL' || activeTab === 'EVIDENCE' ? 'text-amber-300' : 'text-cyan-400'}`} />
+                {!sidebarCollapsed && (
+                  <div className="ml-3 text-left min-w-0 flex-1">
+                    <span className="block truncate font-serif font-bold text-[13px] leading-tight">AI Detection &amp; Evidence</span>
+                    <span className="text-[10px] opacity-75 font-normal block truncate">Video Analytics &amp; Findings</span>
+                  </div>
+                )}
+                {sidebarCollapsed && (
+                  <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 border border-slate-700 text-white text-[11px] font-semibold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition whitespace-nowrap z-50">
+                    AI Detection &amp; Evidence
+                  </div>
+                )}
+              </button>
+
+              {/* Response Tracking */}
+              <button
+                id="sidebar-nav-tracking"
+                onClick={() => {
+                  switchTab('TRACKING');
+                  setMobileSidebarOpen(false);
+                }}
+                title={sidebarCollapsed ? 'Response Tracking' : undefined}
+                className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center p-3' : 'px-3 py-2.5'} rounded-2xl text-xs font-bold transition-all group relative ${
+                  activeTab === 'TRACKING'
+                    ? 'bg-gradient-to-r from-red-600 via-rose-700 to-red-600 text-white shadow-lg shadow-red-950/60 border border-amber-400/40'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-900/80 border border-transparent'
+                }`}
+              >
+                <Navigation className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${activeTab === 'TRACKING' ? 'text-amber-300' : 'text-indigo-400'}`} />
+                {!sidebarCollapsed && (
+                  <div className="ml-3 text-left min-w-0 flex-1">
+                    <span className="block truncate font-serif font-bold text-[13px] leading-tight">Response Tracking</span>
+                    <span className="text-[10px] opacity-75 font-normal block truncate">Fleet Live Tracking &amp; ETA</span>
+                  </div>
+                )}
+                {sidebarCollapsed && (
+                  <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 border border-slate-700 text-white text-[11px] font-semibold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition whitespace-nowrap z-50">
+                    Response Tracking
+                  </div>
+                )}
+              </button>
+            </div>
+
+            {/* GROUP 3: INTELLIGENCE */}
+            <div className="space-y-1">
+              {!sidebarCollapsed && (
+                <div className="px-2.5 text-[10px] font-mono font-bold uppercase tracking-wider text-purple-400/90 flex items-center justify-between">
+                  <span>INTELLIGENCE</span>
+                  <span className="text-[9px] text-slate-500 font-sans">Analytics</span>
+                </div>
+              )}
+
+              {/* Alerts & Escalations */}
+              <button
+                id="sidebar-nav-alerts"
+                onClick={() => {
+                  switchTab('ALERTS');
+                  setMobileSidebarOpen(false);
+                }}
+                title={sidebarCollapsed ? 'Alerts & Escalations' : undefined}
+                className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center p-3' : 'px-3 py-2.5'} rounded-2xl text-xs font-bold transition-all group relative ${
+                  activeTab === 'ALERTS'
+                    ? 'bg-gradient-to-r from-red-600 via-rose-700 to-red-600 text-white shadow-lg shadow-red-950/60 border border-amber-400/40'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-900/80 border border-transparent'
+                }`}
+              >
+                <BellRing className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${activeTab === 'ALERTS' ? 'text-amber-300' : 'text-purple-400'}`} />
+                {!sidebarCollapsed && (
+                  <div className="ml-3 text-left min-w-0 flex-1">
+                    <span className="block truncate font-serif font-bold text-[13px] leading-tight">Alerts &amp; Escalations</span>
+                    <span className="text-[10px] opacity-75 font-normal block truncate">Alert Lifecycle &amp; Escalation</span>
+                  </div>
+                )}
+                {sidebarCollapsed && (
+                  <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 border border-slate-700 text-white text-[11px] font-semibold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition whitespace-nowrap z-50">
+                    Alerts &amp; Escalations
+                  </div>
+                )}
+              </button>
+
+              {/* Reports & Analytics */}
+              <button
+                id="sidebar-nav-analytics"
+                onClick={() => {
+                  switchTab('ANALYTICS');
+                  setMobileSidebarOpen(false);
+                }}
+                title={sidebarCollapsed ? 'Reports & Analytics' : undefined}
+                className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center p-3' : 'px-3 py-2.5'} rounded-2xl text-xs font-bold transition-all group relative ${
+                  activeTab === 'ANALYTICS' || activeTab === 'TESTS'
+                    ? 'bg-gradient-to-r from-red-600 via-rose-700 to-red-600 text-white shadow-lg shadow-red-950/60 border border-amber-400/40'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-900/80 border border-transparent'
+                }`}
+              >
+                <BarChart3 className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${activeTab === 'ANALYTICS' || activeTab === 'TESTS' ? 'text-amber-300' : 'text-amber-400'}`} />
+                {!sidebarCollapsed && (
+                  <div className="ml-3 text-left min-w-0 flex-1">
+                    <span className="block truncate font-serif font-bold text-[13px] leading-tight">Reports &amp; Analytics</span>
+                    <span className="text-[10px] opacity-75 font-normal block truncate">10 KPIs &amp; 12 Acceptance Tests</span>
+                  </div>
+                )}
+                {sidebarCollapsed && (
+                  <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 border border-slate-700 text-white text-[11px] font-semibold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition whitespace-nowrap z-50">
+                    Reports &amp; Analytics
+                  </div>
+                )}
+              </button>
+            </div>
+
+            {/* GROUP 4: CONFIGURATION */}
+            <div className="space-y-1">
+              {!sidebarCollapsed && (
+                <div className="px-2.5 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                  <span>CONFIGURATION</span>
+                  <span className="text-[9px] text-slate-500 font-sans">Settings</span>
+                </div>
+              )}
+
+              {/* Emergency Settings */}
+              <button
+                id="sidebar-nav-config"
+                onClick={() => {
+                  switchTab('CONFIG');
+                  setMobileSidebarOpen(false);
+                }}
+                title={sidebarCollapsed ? 'Emergency Settings' : undefined}
+                className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center p-3' : 'px-3 py-2.5'} rounded-2xl text-xs font-bold transition-all group relative ${
+                  activeTab === 'CONFIG'
+                    ? 'bg-gradient-to-r from-red-600 via-rose-700 to-red-600 text-white shadow-lg shadow-red-950/60 border border-amber-400/40'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-900/80 border border-transparent'
+                }`}
+              >
+                <Settings className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${activeTab === 'CONFIG' ? 'text-amber-300' : 'text-slate-400'}`} />
+                {!sidebarCollapsed && (
+                  <div className="ml-3 text-left min-w-0 flex-1">
+                    <span className="block truncate font-serif font-bold text-[13px] leading-tight">Emergency Settings</span>
+                    <span className="text-[10px] opacity-75 font-normal block truncate">Sirens, Modes &amp; Permissions</span>
+                  </div>
+                )}
+                {sidebarCollapsed && (
+                  <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 border border-slate-700 text-white text-[11px] font-semibold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition whitespace-nowrap z-50">
+                    Emergency Settings
+                  </div>
+                )}
+              </button>
+            </div>
+
+          </div>
+
+          {/* Quick Back Arrow at bottom of sidebar (1 step back) */}
+          <div className="pt-2 border-t border-slate-800/80 mt-auto">
+            <button
+              onClick={handleEmergencyBack}
+              title="Go 1 Step Back"
+              className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center p-2.5' : 'px-3 py-2'} rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 transition text-xs font-semibold group`}
+            >
+              <ArrowLeft className="w-4 h-4 text-amber-400 shrink-0 transition-transform group-hover:-translate-x-0.5" />
+              {!sidebarCollapsed && <span className="ml-2.5 truncate">1 Step Back</span>}
+            </button>
+          </div>
+        </aside>
+
+        {/* ── 4. MAIN WORKSPACE CONTENT ────────────────────────────────────────── */}
+        <main className="flex-1 min-w-0 pb-12">
+          
+          {/* ── TAB: OVERVIEW / DASHBOARD ─────────────────────────────────────── */}
+          {(activeTab === 'OVERVIEW' || activeTab === 'DASHBOARD') && (
           <div className="space-y-6">
             
             {/* Top Split: Live CCTV Spotlight & Active Alert Desk */}
@@ -1305,7 +1657,7 @@ export const EmergencyResponseView: React.FC<EmergencyResponseViewProps> = ({ on
         )}
 
         {/* ── TAB: EMERGENCY ALERT CENTER & TRIAGE (Section 6, 8) ───────────── */}
-        {activeTab === 'ALERTS' && (
+        {(activeTab === 'ALERTS' || activeTab === 'ACTIVE_EMERGENCIES') && (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-white dark:bg-heritage-charcoal border border-heritage-stone dark:border-heritage-charcoal">
               <div>
@@ -1534,7 +1886,7 @@ export const EmergencyResponseView: React.FC<EmergencyResponseViewProps> = ({ on
         )}
 
         {/* ── TAB: RAPID DISPATCH CONSOLE (Section 11) ──────────────────────── */}
-        {activeTab === 'DISPATCH' && (
+        {(activeTab === 'DISPATCH' || activeTab === 'TRACKING') && (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-white dark:bg-heritage-charcoal border border-heritage-stone dark:border-heritage-charcoal">
               <div>
@@ -1596,7 +1948,7 @@ export const EmergencyResponseView: React.FC<EmergencyResponseViewProps> = ({ on
         )}
 
         {/* ── TAB: AI INCIDENT INTELLIGENCE (Section 12) ────────────────────── */}
-        {activeTab === 'AI_INTEL' && (
+        {(activeTab === 'AI_INTEL' || activeTab === 'EVIDENCE') && (
           <div className="space-y-6">
             <div className="p-4 rounded-2xl bg-white dark:bg-heritage-charcoal border border-heritage-stone dark:border-heritage-charcoal">
               <h3 className="font-serif font-bold text-lg text-heritage-maroon dark:text-heritage-gold">
@@ -1683,8 +2035,8 @@ export const EmergencyResponseView: React.FC<EmergencyResponseViewProps> = ({ on
           </div>
         )}
 
-        {/* ── TAB: 4. SYSTEM STATS & ACCEPTANCE TESTS (Section 1 & 17) ───────── */}
-        {activeTab === 'TESTS' && (
+        {/* ── TAB: 4. SYSTEM STATS, REPORTS & ANALYTICS (Section 1 & 17) ───── */}
+        {(activeTab === 'TESTS' || activeTab === 'ANALYTICS') && (
           <div className="space-y-6">
             
             {/* Part 1: Top 10 Live Operational KPI Summary Cards */}
@@ -1758,7 +2110,7 @@ export const EmergencyResponseView: React.FC<EmergencyResponseViewProps> = ({ on
             <div className="p-4 rounded-3xl bg-slate-950 border border-slate-800 text-white space-y-3">
               <div className="flex items-center space-x-2 text-xs">
                 <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-                <span className="font-bold text-amber-200">Interactive Simulation Triggers (सिमुलेशन टूल्स):</span>
+                <span className="font-bold text-amber-200">Interactive Simulation Triggers:</span>
                 <span className="text-slate-400">Generate synthetic incidents to test alarm sounds, cross-portal alerts &amp; route assistance.</span>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -1849,7 +2201,94 @@ export const EmergencyResponseView: React.FC<EmergencyResponseViewProps> = ({ on
           </div>
         )}
 
+        {/* ── TAB: CONFIGURATION / EMERGENCY SETTINGS ──────────────────────── */}
+        {activeTab === 'CONFIG' && (
+          <div className="space-y-6">
+            <div className="p-6 rounded-3xl bg-slate-950 border border-slate-800 shadow-xl space-y-6 text-white">
+              <div className="flex items-center space-x-3 pb-4 border-b border-slate-800">
+                <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800 text-amber-400">
+                  <Settings className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-serif font-bold text-lg text-white">Emergency Operational Settings</h3>
+                  <p className="text-xs text-slate-400">Configure emergency telemetry, siren synthesizer, and operational mode.</p>
+                </div>
+              </div>
+
+              {/* Setting 1: Siren Presets */}
+              <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-serif font-bold text-sm text-amber-300">Acoustic Siren Synthesizer</h4>
+                    <p className="text-xs text-slate-400">Select active waveform and harmonic synthesis frequency preset.</p>
+                  </div>
+                  <button
+                    onClick={() => triggerAudioSiren()}
+                    className="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs shadow transition flex items-center space-x-1.5"
+                  >
+                    <Siren className="w-3.5 h-3.5" />
+                    <span>Test Sound</span>
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                  {SIREN_PRESETS.map(preset => (
+                    <button
+                      key={preset.id}
+                      onClick={() => {
+                        setSirenMode(preset.id);
+                        triggerAudioSiren(preset.id);
+                        showToast(`Selected Siren Preset: ${preset.name}`, 'info');
+                      }}
+                      className={`p-3 rounded-xl border text-left transition ${
+                        sirenMode === preset.id
+                          ? 'border-amber-400 bg-amber-950/30 text-white shadow-md'
+                          : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="text-base">{preset.icon}</span>
+                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-800 text-amber-300">{preset.badge}</span>
+                      </div>
+                      <span className="block font-bold text-xs text-white truncate">{preset.name}</span>
+                      <span className="block text-[10px] font-mono text-slate-400 mt-0.5">{preset.frequencyRange}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Setting 2: Operating Mode */}
+              <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 flex items-center justify-between">
+                <div>
+                  <h4 className="font-serif font-bold text-sm text-white">System Operating Environment</h4>
+                  <p className="text-xs text-slate-400">Toggle between DEMO evaluation mode and LIVE production dispatch mode.</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => {
+                      setOperatingMode('DEMO');
+                      showToast('Operating Mode: DEMO Simulation Active', 'info');
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${operatingMode === 'DEMO' ? 'bg-amber-600 text-white shadow' : 'bg-slate-800 text-slate-400'}`}
+                  >
+                    DEMO SIMULATION
+                  </button>
+                  <button
+                    onClick={() => {
+                      setOperatingMode('LIVE');
+                      showToast('Operating Mode: LIVE EOC Command Enabled', 'alert');
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${operatingMode === 'LIVE' ? 'bg-rose-600 text-white shadow' : 'bg-slate-800 text-slate-400'}`}
+                  >
+                    LIVE PRODUCTION
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
       </main>
+      </div>
 
       {/* ── MODAL: RAPID MULTI-AGENCY DISPATCH DIALOG (Section 11) ────────────── */}
       {showDispatchModal && (

@@ -759,39 +759,11 @@ export const CitizenAuthView: React.FC<CitizenAuthViewProps> = ({
               {/* Preferred Language */}
               <div className="sm:col-span-2">
                 <label className="block text-xs font-semibold text-heritage-charcoal dark:text-heritage-stone mb-1">
-                  Preferred Language / ପସନ୍ଦର ଭାଷା
+                  Preferred Language
                 </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <label className={`flex items-center space-x-2 p-2.5 rounded-xl border cursor-pointer transition-all ${
-                    preferredLanguage === 'en'
-                      ? 'border-heritage-gold bg-heritage-gold/10 text-heritage-maroon dark:text-heritage-gold font-bold'
-                      : 'border-heritage-stone dark:border-heritage-charcoal-dark text-heritage-aged'
-                  }`}>
-                    <input
-                      type="radio"
-                      name="lang"
-                      checked={preferredLanguage === 'en'}
-                      onChange={() => setPreferredLanguage('en')}
-                      className="sr-only"
-                    />
-                    <Globe className="w-4 h-4" />
-                    <span className="text-xs">English</span>
-                  </label>
-                  <label className={`flex items-center space-x-2 p-2.5 rounded-xl border cursor-pointer transition-all ${
-                    preferredLanguage === 'or'
-                      ? 'border-heritage-gold bg-heritage-gold/10 text-heritage-maroon dark:text-heritage-gold font-bold'
-                      : 'border-heritage-stone dark:border-heritage-charcoal-dark text-heritage-aged'
-                  }`}>
-                    <input
-                      type="radio"
-                      name="lang"
-                      checked={preferredLanguage === 'or'}
-                      onChange={() => setPreferredLanguage('or')}
-                      className="sr-only"
-                    />
-                    <Globe className="w-4 h-4" />
-                    <span className="text-xs">ଓଡ଼ିଆ (Odia)</span>
-                  </label>
+                <div className="flex items-center space-x-2 p-2.5 rounded-xl border border-heritage-gold bg-heritage-gold/10 text-heritage-maroon dark:text-heritage-gold font-bold w-full max-w-xs">
+                  <Globe className="w-4 h-4 text-heritage-gold" />
+                  <span className="text-xs">English (Primary &amp; Default)</span>
                 </div>
               </div>
 

@@ -4,9 +4,11 @@ import {
   Bookmark, CheckCircle2, Shield, Sparkles, Navigation, Info, Heart,
   Share2, ChevronRight, X, ExternalLink, RefreshCw, Car, Bus, Train,
   Plane, Eye, Star, AlertCircle, MessageSquare, Send, Check, Footprints,
-  SlidersHorizontal, Layers, Award, Landmark, Trees, Waves, Palette, Utensils
+  SlidersHorizontal, Layers, Award, Landmark, Trees, Waves, Palette, Utensils,
+  Hotel, Phone, ShieldAlert, Sun, CloudRain, Thermometer, Activity, Siren, Coffee
 } from 'lucide-react';
 import { KonarkWheelIcon } from './OdishaMotifs';
+import { BalasoreTouristMap } from './BalasoreTouristMap';
 
 interface DestinationSummary {
   id: number;
@@ -62,6 +64,80 @@ interface DestinationDetail extends DestinationSummary {
   }>;
 }
 
+interface TourismAccommodation {
+  id: number;
+  name: string;
+  category: string;
+  location: string;
+  district: string;
+  destination_id?: number;
+  latitude: number;
+  longitude: number;
+  price_range: string;
+  rating: number;
+  contact_phone: string;
+  booking_url?: string;
+  amenities: string[];
+  image_url: string;
+  description: string;
+}
+
+interface TourismDining {
+  id: number;
+  name: string;
+  cuisine_type: string;
+  speciality: string;
+  location: string;
+  district: string;
+  destination_id?: number;
+  latitude: number;
+  longitude: number;
+  price_range: string;
+  rating: number;
+  timings: string;
+  must_try: string[];
+  image_url: string;
+  is_veg_friendly: boolean;
+}
+
+interface TourismTravelCondition {
+  id: number;
+  location: string;
+  coastal_tide_status: {
+    condition: 'LOW_TIDE' | 'HIGH_TIDE' | 'TRANSITION';
+    next_high_tide: string;
+    next_low_tide: string;
+    recession_distance: string;
+    safety_message: string;
+  };
+  weather: {
+    temp_c: number;
+    condition: string;
+    wind_kmh: number;
+    humidity: number;
+    uv_index: number;
+  };
+  road_status: {
+    corridor: string;
+    condition: string;
+    travel_time_from_balasore: string;
+    notes: string;
+  };
+}
+
+interface TourismEmergencyContact {
+  id: number;
+  name: string;
+  role: string;
+  service_type: string;
+  phone: string;
+  emergency_number: string;
+  location: string;
+  is_24x7: boolean;
+  latitude: number;
+  longitude: number;
+}
+
 interface TourismEvent {
   id: number;
   event_code: string;
@@ -111,13 +187,14 @@ const CATEGORIES = [
   { id: 'HERITAGE_TEMPLE', label: 'Temples & Heritage', labelOr: 'ମନ୍ଦିର ଓ ଐତିହ୍ୟ', icon: Landmark },
   { id: 'NATURE_WILDLIFE', label: 'Nature & Wildlife', labelOr: 'ପ୍ରକୃତି ଓ ଅଭୟାରଣ୍ୟ', icon: Trees },
   { id: 'BEACHES_COAST', label: 'Beaches & Coast', labelOr: 'ବେଳାଭୂମି ଓ ଉପକୂଳ', icon: Waves },
+  { id: 'HERITAGE_TOWN', label: 'Heritage Towns', labelOr: 'ଐତିହ୍ୟ ନଗର', icon: Footprints },
   { id: 'ARTS_CRAFTS', label: 'Arts & Crafts', labelOr: 'ହସ୍ତତନ୍ତ ଓ ଶିଳ୍ପ', icon: Palette },
 ];
 
-const DISTRICTS = ['ALL', 'Puri', 'Khordha', 'Mayurbhanj', 'Cuttack', 'Ganjam', 'Sambalpur'];
+const DISTRICTS = ['ALL', 'Balasore', 'Mayurbhanj', 'Bhadrak', 'Khordha', 'Puri', 'Cuttack'];
 
 export const SmartTourismCenter: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'discover' | 'planner' | 'updates' | 'trails' | 'companion' | 'saved'>('discover');
+  const [activeTab, setActiveTab] = useState<'discover' | 'map' | 'planner' | 'stay_food' | 'travel_conditions' | 'assistance' | 'updates' | 'trails' | 'companion' | 'saved'>('discover');
   const [lang, setLang] = useState<'en' | 'or'>('en');
 
   // Directory state
@@ -125,7 +202,7 @@ export const SmartTourismCenter: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
-  const [selectedDistrict, setSelectedDistrict] = useState<string>('ALL');
+  const [selectedDistrict, setSelectedDistrict] = useState<string>('Balasore');
   const [accessibilityFilter, setAccessibilityFilter] = useState<string>('ALL');
 
   // Detail Modal
@@ -172,6 +249,27 @@ export const SmartTourismCenter: React.FC = () => {
     }
   ]);
   const [companionLoading, setCompanionLoading] = useState<boolean>(false);
+
+  // Accommodations & Dining State
+  const [accommodations, setAccommodations] = useState<TourismAccommodation[]>([]);
+  const [dining, setDining] = useState<TourismDining[]>([]);
+  const [stayFoodFilter, setStayFoodFilter] = useState<'ALL' | 'HOTELS' | 'DINING'>('ALL');
+  const [stayFoodLoading, setStayFoodLoading] = useState<boolean>(false);
+
+  // Travel Conditions & Weather State
+  const [travelConditions, setTravelConditions] = useState<TourismTravelCondition[]>([]);
+  const [weatherLive, setWeatherLive] = useState<any>(null);
+  const [weatherLoading, setWeatherLoading] = useState<boolean>(false);
+
+  // Emergency Assistance & SOS State
+  const [emergencyContacts, setEmergencyContacts] = useState<TourismEmergencyContact[]>([]);
+  const [sosCategory, setSosCategory] = useState<string>('MEDICAL');
+  const [sosName, setSosName] = useState<string>('');
+  const [sosPhone, setSosPhone] = useState<string>('');
+  const [sosLocation, setSosLocation] = useState<string>('Chandipur Beach');
+  const [sosDesc, setSosDesc] = useState<string>('');
+  const [sosLoading, setSosLoading] = useState<boolean>(false);
+  const [sosSuccessResult, setSosSuccessResult] = useState<any | null>(null);
 
   // ───────────────────────────────────────────────────────────────────────────
   // API FETCHERS
@@ -231,6 +329,66 @@ export const SmartTourismCenter: React.FC = () => {
     }
   };
 
+  const fetchAccommodationsAndDining = async () => {
+    setStayFoodLoading(true);
+    try {
+      const [accRes, dinRes, condRes, emRes] = await Promise.all([
+        fetch('/api/tourism/accommodations'),
+        fetch('/api/tourism/dining'),
+        fetch('/api/tourism/travel-conditions'),
+        fetch('/api/tourism/emergency-contacts')
+      ]);
+      if (accRes.ok) setAccommodations(await accRes.json());
+      if (dinRes.ok) setDining(await dinRes.json());
+      if (condRes.ok) setTravelConditions(await condRes.json());
+      if (emRes.ok) setEmergencyContacts(await emRes.json());
+    } catch (err) {
+      console.error('Failed to load accommodations and dining:', err);
+    } finally {
+      setStayFoodLoading(false);
+    }
+  };
+
+  const fetchLiveWeather = async () => {
+    setWeatherLoading(true);
+    try {
+      const res = await fetch('/api/tourism/weather');
+      if (res.ok) setWeatherLive(await res.json());
+    } catch (err) {
+      console.error('Failed to fetch live weather:', err);
+    } finally {
+      setWeatherLoading(false);
+    }
+  };
+
+  const handleSubmitSOS = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sosName || !sosPhone || !sosDesc) return;
+    setSosLoading(true);
+    try {
+      const res = await fetch('/api/tourism/assistance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requester_name: sosName,
+          requester_phone: sosPhone,
+          category: sosCategory,
+          description: sosDesc,
+          location_name: sosLocation,
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSosSuccessResult(data);
+        setSosDesc('');
+      }
+    } catch (err) {
+      console.error('Failed to submit SOS assistance:', err);
+    } finally {
+      setSosLoading(false);
+    }
+  };
+
   const fetchSavedDestinations = async () => {
     try {
       const res = await fetch('/api/tourism/saved-destinations?citizen_id=1');
@@ -250,6 +408,8 @@ export const SmartTourismCenter: React.FC = () => {
 
   useEffect(() => {
     fetchEventsAndAdvisories();
+    fetchAccommodationsAndDining();
+    fetchLiveWeather();
     fetchSavedDestinations();
   }, []);
 
@@ -420,58 +580,54 @@ export const SmartTourismCenter: React.FC = () => {
             <div className="flex items-center space-x-2.5 mb-2">
               <span className="px-3 py-1 rounded-full bg-heritage-gold/25 border border-heritage-gold/40 text-heritage-gold text-xs font-bold uppercase tracking-wider flex items-center space-x-1.5">
                 <Compass className="w-3.5 h-3.5" />
-                <span>Odisha Smart Tourism</span>
+                <span>Balasore Smart Tourism Platform · ବାଲେଶ୍ୱର ପର୍ଯ୍ୟଟନ</span>
               </span>
               <span className="text-white/60 text-xs">·</span>
-              <span className="text-heritage-gold/90 text-xs font-serif italic">CIVIC NEXUS AI Companion</span>
+              <span className="text-heritage-gold/90 text-xs font-serif italic">CIVIC NEXUS AI</span>
             </div>
             
             <h1 className="font-serif font-black text-2xl sm:text-3xl lg:text-4xl tracking-tight text-white">
-              {lang === 'en' ? 'Discover Odisha' : 'ଓଡ଼ିଶା ଦର୍ଶନ'}
+              Discover Balasore (Baleshwar)
             </h1>
             <p className="text-white/80 text-xs sm:text-sm mt-1.5 font-light leading-relaxed">
-              {lang === 'en'
-                ? 'Culture, nature, heritage & experiences — thoughtfully connected with real-time civic updates, accessibility and verified sources.'
-                : 'ଐତିହ୍ୟ, ସଂସ୍କୃତି ଓ ପ୍ରକୃତିର ସମନ୍ୱୟ — ସତ୍ୟାପିତ ସୂଚନା ଏବଂ ସୁଗମ ପର୍ଯ୍ୟଟନ ସହ।'}
+              Experience Chandipur's mysterious disappearing sea, the perennial streams of Panchalingeswar, Kuldiha's elephant corridor &amp; centuries-old royal shrines — protected by real-time tidal alerts, verified hotels, authentic Odia cuisine and 24x7 emergency assistance.
             </p>
           </div>
 
-          {/* Quick Metrics & Lang toggle */}
-          <div className="flex items-center space-x-3 shrink-0">
-            <div className="flex bg-black/30 backdrop-blur-md rounded-2xl p-1 border border-white/10 text-xs">
-              <button
-                onClick={() => setLang('en')}
-                className={`px-3 py-1.5 rounded-xl font-bold transition-all ${lang === 'en' ? 'bg-heritage-gold text-heritage-charcoal shadow-sm' : 'text-white/70 hover:text-white'}`}
-              >
-                English
-              </button>
-              <button
-                onClick={() => setLang('or')}
-                className={`px-3 py-1.5 rounded-xl font-bold transition-all ${lang === 'or' ? 'bg-heritage-gold text-heritage-charcoal shadow-sm' : 'text-white/70 hover:text-white'}`}
-              >
-                ଓଡ଼ିଆ
-              </button>
-            </div>
+          <div className="flex items-center space-x-2 self-start md:self-auto">
+            <button
+              onClick={() => setLang(lang === 'en' ? 'or' : 'en')}
+              className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-bold text-heritage-gold transition-all"
+            >
+              {lang === 'en' ? 'ଓଡ଼ିଆ ଭାଷା' : 'English'}
+            </button>
+            <button
+              onClick={() => setActiveTab('assistance')}
+              className="px-3 py-1.5 rounded-xl bg-red-600/90 hover:bg-red-700 text-white text-xs font-bold flex items-center space-x-1.5 shadow-sm"
+            >
+              <Siren className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+              <span>Tourist SOS Desk</span>
+            </button>
           </div>
         </div>
 
         {/* Hero telemetry strip */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5 border-t border-white/15">
           <div className="bg-white/10 backdrop-blur-md rounded-xl p-2.5 border border-white/10">
-            <p className="text-[10px] text-heritage-gold uppercase tracking-wider font-semibold">Verified Destinations</p>
-            <p className="text-lg font-bold text-white mt-0.5">{destinations.length || 8} Sites</p>
+            <p className="text-[10px] text-heritage-gold uppercase tracking-wider font-semibold">Balasore Attractions</p>
+            <p className="text-lg font-bold text-white mt-0.5">{destinations.length || 8} Sites Mapped</p>
           </div>
           <div className="bg-white/10 backdrop-blur-md rounded-xl p-2.5 border border-white/10">
-            <p className="text-[10px] text-heritage-gold uppercase tracking-wider font-semibold">Cultural Festivals</p>
-            <p className="text-lg font-bold text-white mt-0.5">{events.length || 3} Scheduled</p>
+            <p className="text-[10px] text-heritage-gold uppercase tracking-wider font-semibold">Chandipur Sea Tide</p>
+            <p className="text-lg font-bold text-emerald-300 mt-0.5">Low Tide ~4.8 km</p>
           </div>
           <div className="bg-white/10 backdrop-blur-md rounded-xl p-2.5 border border-white/10">
-            <p className="text-[10px] text-heritage-gold uppercase tracking-wider font-semibold">Live Civic Advisories</p>
-            <p className="text-lg font-bold text-amber-300 mt-0.5">{advisories.length || 3} Active</p>
+            <p className="text-[10px] text-heritage-gold uppercase tracking-wider font-semibold">Hotels &amp; Panthanivas</p>
+            <p className="text-lg font-bold text-white mt-0.5">{accommodations.length || 6} Verified</p>
           </div>
           <div className="bg-white/10 backdrop-blur-md rounded-xl p-2.5 border border-white/10">
-            <p className="text-[10px] text-heritage-gold uppercase tracking-wider font-semibold">Curated Trails</p>
-            <p className="text-lg font-bold text-white mt-0.5">{trails.length || 3} Circuits</p>
+            <p className="text-[10px] text-heritage-gold uppercase tracking-wider font-semibold">Tourist Helplines</p>
+            <p className="text-lg font-bold text-amber-300 mt-0.5">112 / 108 24x7</p>
           </div>
         </div>
       </div>
@@ -479,12 +635,16 @@ export const SmartTourismCenter: React.FC = () => {
       {/* ── MAIN NAVIGATION TABS ────────────────────────────────────────────── */}
       <div className="flex space-x-2 overflow-x-auto pb-2 mb-6 border-b border-heritage-stone dark:border-heritage-charcoal scrollbar-none">
         {[
-          { id: 'discover', label: 'Discover Destinations', labelOr: 'ସ୍ଥଳ ଅନ୍ୱେଷଣ', icon: Compass },
-          { id: 'planner', label: 'Smart Trip Planner', labelOr: 'ଯାତ୍ରା ଯୋଜନା', icon: Navigation },
-          { id: 'updates', label: 'Live Travel & Civic Alerts', labelOr: 'ସତର୍କତା ଓ ଘଟଣାବଳୀ', icon: AlertTriangle, badge: advisories.length },
-          { id: 'trails', label: 'Heritage Trails', labelOr: 'ଐତିହ୍ୟ ପରିକ୍ରମା', icon: Footprints },
-          { id: 'companion', label: 'AI Travel Companion', labelOr: 'ଏଆଇ ସହାୟକ', icon: Sparkles },
-          { id: 'saved', label: 'My Travel Collection', labelOr: 'ମୋ ସଂଗ୍ରହ', icon: Bookmark, badge: savedIds.size },
+          { id: 'discover', label: 'Destinations Directory', labelOr: 'ସ୍ଥଳ ଅନ୍ୱେଷଣ', icon: Compass },
+          { id: 'map', label: 'Interactive Map', labelOr: 'ମାନଚିତ୍ର', icon: MapPin },
+          { id: 'planner', label: 'AI Trip Planner', labelOr: 'ଯାତ୍ରା ଯୋଜନା', icon: Navigation },
+          { id: 'stay_food', label: 'Hotels & Authentic Cuisine', labelOr: 'ରହଣି ଓ ଆହାର', icon: Hotel },
+          { id: 'travel_conditions', label: 'Tides, Weather & Roads', labelOr: 'ଜଳବାୟୁ ଓ ରାସ୍ତା', icon: Waves },
+          { id: 'assistance', label: 'Emergency & Safety Desk', labelOr: 'ସୁରକ୍ଷା ଓ ସହାୟତା', icon: ShieldAlert },
+          { id: 'updates', label: 'Travel Alerts & Events', labelOr: 'ସତର୍କତା ଓ ଘଟଣା', icon: AlertTriangle, badge: advisories.length },
+          { id: 'trails', label: 'Heritage Circuits', labelOr: 'ଐତିହ୍ୟ ପରିକ୍ରମା', icon: Footprints },
+          { id: 'companion', label: 'AI Companion', labelOr: 'ଏଆଇ ସହାୟକ', icon: Sparkles },
+          { id: 'saved', label: 'My Collection', labelOr: 'ମୋ ସଂଗ୍ରହ', icon: Bookmark, badge: savedIds.size },
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -706,13 +866,25 @@ export const SmartTourismCenter: React.FC = () => {
                           <Eye className="w-3.5 h-3.5 text-heritage-gold" />
                           <span>Explore Guide</span>
                         </button>
+
+                        <button
+                          onClick={() => {
+                            setSelectedDestId(d.id);
+                            setActiveTab('map');
+                          }}
+                          className="px-2.5 py-2 rounded-xl bg-heritage-ivory dark:bg-heritage-charcoal-dark border border-heritage-stone dark:border-heritage-charcoal hover:border-heritage-gold text-heritage-maroon dark:text-heritage-gold text-xs font-bold transition-all flex items-center space-x-1"
+                          title="View on Map"
+                        >
+                          <MapPin className="w-3.5 h-3.5 text-heritage-gold" />
+                          <span>Map</span>
+                        </button>
                         
                         <button
                           onClick={() => {
                             setSelectedDestId(d.id);
                             setShowCorrectionModal(true);
                           }}
-                          className="px-3 py-2 rounded-xl border border-heritage-stone dark:border-heritage-charcoal hover:border-heritage-gold text-heritage-aged hover:text-heritage-charcoal text-[11px] font-semibold transition-colors"
+                          className="px-2.5 py-2 rounded-xl border border-heritage-stone dark:border-heritage-charcoal hover:border-heritage-gold text-heritage-aged hover:text-heritage-charcoal text-[11px] font-semibold transition-colors"
                           title="Report inaccuracy"
                         >
                           Feedback
@@ -724,6 +896,36 @@ export const SmartTourismCenter: React.FC = () => {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── TAB: INTERACTIVE TOURIST MAP ────────────────────────────────────── */}
+      {activeTab === 'map' && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="font-serif font-black text-xl text-heritage-maroon dark:text-heritage-gold flex items-center space-x-2">
+                <MapPin className="w-5 h-5 text-heritage-gold" />
+                <span>Balasore District Interactive Tourist Map</span>
+              </h2>
+              <p className="text-xs text-heritage-aged mt-0.5">
+                Cartographic discovery with tidal boundaries, natural heritage zones &amp; turn-by-turn routing
+              </p>
+            </div>
+            <div className="flex items-center space-x-2 text-xs">
+              <span className="px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-bold flex items-center space-x-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                <span>8 Verified Balasore Coordinates Active</span>
+              </span>
+            </div>
+          </div>
+
+          <BalasoreTouristMap
+            destinations={destinations}
+            onSelectDestination={fetchDetail}
+            selectedDestId={selectedDestId}
+            height="620px"
+          />
         </div>
       )}
 
@@ -878,6 +1080,556 @@ export const SmartTourismCenter: React.FC = () => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB: HOTELS & AUTHENTIC ODIA DINING ───────────────────────────────── */}
+      {activeTab === 'stay_food' && (
+        <div className="space-y-6 animate-fade-in">
+          
+          {/* Header & Sub-Filter Strip */}
+          <div className="p-6 rounded-3xl bg-white dark:bg-heritage-charcoal border border-heritage-stone dark:border-heritage-charcoal shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 className="font-serif font-black text-xl text-heritage-maroon dark:text-heritage-gold flex items-center space-x-2">
+                <Hotel className="w-5 h-5 text-heritage-gold" />
+                <span>Hotels, Panthanivas &amp; Authentic Odia Cuisine</span>
+              </h2>
+              <p className="text-xs text-heritage-aged mt-1">
+                Verified government panthanivas, coastal resorts, famous Remuna Khira, and Balasore Mudhi Mansa
+              </p>
+            </div>
+
+            <div className="flex space-x-1.5 bg-heritage-ivory dark:bg-heritage-charcoal-dark p-1 rounded-2xl border border-heritage-stone dark:border-heritage-charcoal">
+              {[
+                { id: 'ALL', label: 'All Options' },
+                { id: 'HOTELS', label: 'Hotels & Panthanivas' },
+                { id: 'DINING', label: 'Cuisine & Seafood' },
+              ].map(sub => (
+                <button
+                  key={sub.id}
+                  onClick={() => setStayFoodFilter(sub.id as any)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    stayFoodFilter === sub.id
+                      ? 'bg-heritage-maroon text-white shadow-sm'
+                      : 'text-heritage-charcoal dark:text-heritage-ivory hover:text-heritage-maroon'
+                  }`}
+                >
+                  {sub.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Section: Accommodations */}
+          {(stayFoodFilter === 'ALL' || stayFoodFilter === 'HOTELS') && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-serif font-bold text-base text-heritage-charcoal dark:text-heritage-ivory flex items-center space-x-2">
+                  <Hotel className="w-4 h-4 text-heritage-gold" />
+                  <span>Verified Accommodations &amp; Panthanivas</span>
+                </h3>
+                <span className="text-xs text-heritage-aged">{accommodations.length} Places Found</span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {accommodations.map(acc => (
+                  <div
+                    key={acc.id}
+                    className="rounded-3xl overflow-hidden bg-white dark:bg-heritage-charcoal border border-heritage-stone dark:border-heritage-charcoal shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="relative h-44 overflow-hidden">
+                        <img
+                          src={acc.image_url}
+                          alt={acc.name}
+                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-black/70 text-heritage-gold backdrop-blur-md">
+                          {acc.category.replace(/_/g, ' ')}
+                        </div>
+                        <div className="absolute top-3 right-3 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-400 text-black flex items-center space-x-1">
+                          <Star className="w-3 h-3 fill-current" />
+                          <span>{acc.rating}</span>
+                        </div>
+                      </div>
+
+                      <div className="p-4 space-y-2.5">
+                        <h4 className="font-bold text-sm text-heritage-charcoal dark:text-heritage-ivory">{acc.name}</h4>
+                        <p className="text-xs text-heritage-aged flex items-center space-x-1">
+                          <MapPin className="w-3 h-3 text-heritage-maroon" />
+                          <span>{acc.location}</span>
+                        </p>
+                        <p className="text-xs text-heritage-charcoal/80 dark:text-heritage-stone/80 line-clamp-2 leading-relaxed">
+                          {acc.description}
+                        </p>
+
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {acc.amenities.map((am, i) => (
+                            <span key={i} className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-heritage-ivory dark:bg-heritage-charcoal-dark border border-heritage-stone/70 text-heritage-charcoal dark:text-heritage-ivory">
+                              {am}
+                            </span>
+                          ))}
+                        </div>
+
+                        <div className="pt-2 border-t border-heritage-stone/60 dark:border-heritage-charcoal flex items-center justify-between">
+                          <div>
+                            <span className="text-[10px] text-heritage-aged uppercase block">Pricing</span>
+                            <span className="text-xs font-bold text-heritage-maroon dark:text-heritage-gold">{acc.price_range}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-4 pt-0 flex space-x-2">
+                      <a
+                        href={`tel:${acc.contact_phone}`}
+                        className="flex-1 py-2 rounded-xl bg-heritage-ivory dark:bg-heritage-charcoal-dark hover:bg-heritage-gold/20 border border-heritage-stone font-bold text-xs text-heritage-maroon dark:text-heritage-gold flex items-center justify-center space-x-1.5 transition-colors"
+                      >
+                        <Phone className="w-3.5 h-3.5" />
+                        <span>Direct Call</span>
+                      </a>
+                      {acc.booking_url && (
+                        <a
+                          href={acc.booking_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 py-2 rounded-xl bg-heritage-maroon hover:bg-heritage-maroon-dark text-white font-bold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition-colors"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5 text-heritage-gold" />
+                          <span>Book Online</span>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Section: Authentic Dining */}
+          {(stayFoodFilter === 'ALL' || stayFoodFilter === 'DINING') && (
+            <div className="space-y-4 pt-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-serif font-bold text-base text-heritage-charcoal dark:text-heritage-ivory flex items-center space-x-2">
+                  <Utensils className="w-4 h-4 text-heritage-gold" />
+                  <span>Authentic Odia Cuisine &amp; Fresh Seafood Hubs</span>
+                </h3>
+                <span className="text-xs text-heritage-aged">{dining.length} Culinary Landmarks</span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {dining.map(d => (
+                  <div
+                    key={d.id}
+                    className="rounded-3xl overflow-hidden bg-white dark:bg-heritage-charcoal border border-heritage-stone dark:border-heritage-charcoal shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="relative h-44 overflow-hidden">
+                        <img
+                          src={d.image_url}
+                          alt={d.name}
+                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-heritage-maroon/90 text-white backdrop-blur-md">
+                          {d.cuisine_type}
+                        </div>
+                        <div className="absolute top-3 right-3 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-400 text-black flex items-center space-x-1">
+                          <Star className="w-3 h-3 fill-current" />
+                          <span>{d.rating}</span>
+                        </div>
+                      </div>
+
+                      <div className="p-4 space-y-2">
+                        <h4 className="font-bold text-sm text-heritage-charcoal dark:text-heritage-ivory">{d.name}</h4>
+                        <p className="text-xs font-semibold text-heritage-maroon dark:text-heritage-gold font-serif">
+                          ★ {d.speciality}
+                        </p>
+                        <p className="text-xs text-heritage-aged flex items-center space-x-1">
+                          <MapPin className="w-3 h-3 text-heritage-gold" />
+                          <span>{d.location}</span>
+                        </p>
+
+                        <div className="pt-2">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-heritage-aged block mb-1">
+                            Must-Try Signatures:
+                          </span>
+                          <div className="flex flex-wrap gap-1">
+                            {d.must_try.map((item, idx) => (
+                              <span key={idx} className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                {item}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="pt-2 border-t border-heritage-stone/60 dark:border-heritage-charcoal flex items-center justify-between text-xs">
+                          <span className="text-heritage-aged">
+                            {d.price_range}
+                          </span>
+                          <span className="font-medium text-heritage-charcoal dark:text-heritage-ivory text-[11px]">
+                            {d.timings}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-4 pt-0">
+                      <a
+                        href={`https://maps.google.com/?q=${encodeURIComponent(d.name + ' ' + d.location)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-2 rounded-xl bg-heritage-ivory dark:bg-heritage-charcoal-dark hover:bg-heritage-gold/20 border border-heritage-stone font-bold text-xs text-heritage-maroon dark:text-heritage-gold flex items-center justify-center space-x-1.5 transition-colors"
+                      >
+                        <Navigation className="w-3.5 h-3.5" />
+                        <span>Directions on Google Maps</span>
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── TAB: TRAVEL CONDITIONS & TIDES ──────────────────────────────────── */}
+      {activeTab === 'travel_conditions' && (
+        <div className="space-y-6 animate-fade-in">
+          
+          {/* Tidal Wonder Banner */}
+          <div className="p-6 rounded-3xl bg-gradient-to-r from-cyan-900 to-sky-950 text-white shadow-xl border border-cyan-500/30">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="max-w-2xl">
+                <div className="flex items-center space-x-2 text-cyan-300 text-xs font-bold uppercase tracking-wider mb-2">
+                  <Waves className="w-4 h-4 animate-pulse" />
+                  <span>Chandipur Tidal Observatory &amp; Marine Dynamics</span>
+                </div>
+                <h2 className="font-serif font-black text-2xl text-white">
+                  The Disappearing Sea Phenomena · ଜୁଆର ଓ ଭଟ୍ଟା
+                </h2>
+                <p className="text-xs sm:text-sm text-cyan-100/90 mt-1.5 leading-relaxed font-light">
+                  Chandipur beach continental shelf is so gradual that the Bay of Bengal recedes up to 5 kilometres twice daily during low tide, allowing tourists to walk onto the empty ocean floor. Follow safety guidelines strictly when the high tide returns.
+                </p>
+              </div>
+
+              <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 text-center shrink-0">
+                <span className="text-[10px] text-cyan-200 uppercase font-bold block">Current State</span>
+                <span className="text-xl font-black text-emerald-300 mt-1 block">LOW TIDE ACTIVE</span>
+                <span className="text-xs text-white/80 block mt-0.5">Recession: ~4.8 km Outward</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Condition Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {travelConditions.map(tc => (
+              <div
+                key={tc.id}
+                className="rounded-3xl bg-white dark:bg-heritage-charcoal border border-heritage-stone dark:border-heritage-charcoal p-5 shadow-sm space-y-4"
+              >
+                <div className="flex items-center justify-between border-b border-heritage-stone/60 dark:border-heritage-charcoal pb-3">
+                  <h4 className="font-bold text-sm text-heritage-charcoal dark:text-heritage-ivory">{tc.location}</h4>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    tc.coastal_tide_status.condition === 'LOW_TIDE'
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                      : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                  }`}>
+                    {tc.coastal_tide_status.condition.replace(/_/g, ' ')}
+                  </span>
+                </div>
+
+                {/* Tide Details */}
+                <div className="p-3 rounded-2xl bg-cyan-50 dark:bg-cyan-950/30 border border-cyan-100 dark:border-cyan-900/40 space-y-1.5 text-xs">
+                  <p className="font-bold text-cyan-900 dark:text-cyan-200 flex items-center space-x-1">
+                    <Waves className="w-3.5 h-3.5 text-cyan-600" />
+                    <span>Tide Schedule &amp; Flow</span>
+                  </p>
+                  <p className="text-[11px] text-cyan-800 dark:text-cyan-300">
+                    <strong>Next Low Tide:</strong> {tc.coastal_tide_status.next_low_tide}
+                  </p>
+                  <p className="text-[11px] text-cyan-800 dark:text-cyan-300">
+                    <strong>Next High Tide:</strong> {tc.coastal_tide_status.next_high_tide}
+                  </p>
+                  <p className="text-[11px] text-cyan-700 dark:text-cyan-400 font-medium pt-1">
+                    ℹ {tc.coastal_tide_status.safety_message}
+                  </p>
+                </div>
+
+                {/* Weather mini-panel */}
+                <div className="p-3 rounded-2xl bg-heritage-ivory dark:bg-heritage-charcoal-dark border border-heritage-stone text-xs space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-heritage-charcoal dark:text-heritage-ivory flex items-center space-x-1">
+                      <Sun className="w-3.5 h-3.5 text-amber-500" />
+                      <span>Weather</span>
+                    </span>
+                    <span className="font-extrabold text-heritage-maroon dark:text-heritage-gold">{tc.weather.temp_c}°C</span>
+                  </div>
+                  <p className="text-[11px] text-heritage-aged">{tc.weather.condition}</p>
+                  <div className="flex justify-between text-[10px] text-heritage-aged pt-1">
+                    <span>Wind: {tc.weather.wind_kmh} km/h</span>
+                    <span>Humidity: {tc.weather.humidity}%</span>
+                    <span>UV Index: {tc.weather.uv_index}</span>
+                  </div>
+                </div>
+
+                {/* Road Corridor Status */}
+                <div className="space-y-1 text-xs">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-bold text-heritage-charcoal dark:text-heritage-ivory flex items-center space-x-1">
+                      <Car className="w-3.5 h-3.5 text-heritage-maroon" />
+                      <span>Road Corridor</span>
+                    </span>
+                    <span className="px-2 py-0.2 rounded font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950 text-[10px]">
+                      {tc.road_status.condition}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-heritage-aged font-semibold">{tc.road_status.corridor}</p>
+                  <p className="text-[10px] text-heritage-aged">Drive Time: {tc.road_status.travel_time_from_balasore}</p>
+                  <p className="text-[10px] text-heritage-aged/90 italic">{tc.road_status.notes}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Live Weather Integration Box */}
+          <div className="p-6 rounded-3xl bg-white dark:bg-heritage-charcoal border border-heritage-stone dark:border-heritage-charcoal shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                <Sun className="w-6 h-6" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-heritage-charcoal dark:text-heritage-ivory">Balasore IMD / OpenWeather Sync</h4>
+                <p className="text-xs text-heritage-aged">
+                  {weatherLive?.available
+                    ? `Live Temperature: ${weatherLive.temperature_c}°C · ${weatherLive.description} · Wind: ${weatherLive.wind_speed_kmh} km/h`
+                    : 'OpenWeatherMap integration ready. Live weather telemetry calibrated for coastal Bay of Bengal.'}
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={fetchLiveWeather}
+              disabled={weatherLoading}
+              className="px-4 py-2 rounded-xl bg-heritage-maroon hover:bg-heritage-maroon-dark text-white font-bold text-xs flex items-center space-x-1.5 shrink-0"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${weatherLoading ? 'animate-spin' : ''}`} />
+              <span>Refresh Weather</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB: TOURIST EMERGENCY & SOS DESK ───────────────────────────────── */}
+      {activeTab === 'assistance' && (
+        <div className="space-y-6 animate-fade-in">
+          
+          {/* Critical Emergency Banner */}
+          <div className="p-6 rounded-3xl bg-gradient-to-r from-red-700 via-rose-800 to-red-900 text-white shadow-xl border border-red-400/40">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="max-w-2xl">
+                <div className="flex items-center space-x-2 text-amber-300 text-xs font-bold uppercase tracking-wider mb-2">
+                  <Siren className="w-4 h-4 animate-bounce" />
+                  <span>24x7 Tourist Assistance &amp; Coastal Safety Desk</span>
+                </div>
+                <h2 className="font-serif font-black text-2xl text-white">
+                  Emergency Helplines &amp; Instant SOS Response
+                </h2>
+                <p className="text-xs sm:text-sm text-rose-100/90 mt-1 leading-relaxed font-light">
+                  Immediate coordination with Balasore Tourist Police, Chandipur Marine Police, District Hospital (DHH) Ambulance 108, and Kuldiha Forest Rescue squads.
+                </p>
+              </div>
+
+              <div className="flex space-x-2 self-start md:self-auto shrink-0">
+                <a
+                  href="tel:112"
+                  className="px-4 py-2.5 rounded-2xl bg-white text-red-700 font-extrabold text-sm shadow-md flex items-center space-x-2 hover:bg-rose-50 transition-colors"
+                >
+                  <Phone className="w-4 h-4" />
+                  <span>Dial 112</span>
+                </a>
+                <a
+                  href="tel:108"
+                  className="px-4 py-2.5 rounded-2xl bg-amber-400 text-black font-extrabold text-sm shadow-md flex items-center space-x-2 hover:bg-amber-300 transition-colors"
+                >
+                  <Activity className="w-4 h-4" />
+                  <span>Ambulance 108</span>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* 2 Columns: Directory of Emergency Contacts */}
+            <div className="lg:col-span-2 space-y-4">
+              <h3 className="font-serif font-bold text-base text-heritage-charcoal dark:text-heritage-ivory flex items-center space-x-2">
+                <ShieldAlert className="w-4 h-4 text-heritage-gold" />
+                <span>Verified Balasore Emergency Helplines</span>
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {emergencyContacts.map(ec => (
+                  <div
+                    key={ec.id}
+                    className="p-4 rounded-3xl bg-white dark:bg-heritage-charcoal border border-heritage-stone dark:border-heritage-charcoal shadow-sm flex flex-col justify-between space-y-3"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-heritage-maroon/10 text-heritage-maroon dark:text-heritage-gold uppercase">
+                          {ec.service_type}
+                        </span>
+                        {ec.is_24x7 && (
+                          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center space-x-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            <span>24x7 Active</span>
+                          </span>
+                        )}
+                      </div>
+                      <h4 className="font-bold text-sm text-heritage-charcoal dark:text-heritage-ivory">{ec.name}</h4>
+                      <p className="text-xs text-heritage-aged">{ec.role}</p>
+                      <p className="text-[11px] text-heritage-charcoal/80 dark:text-heritage-stone mt-1">
+                        📍 {ec.location}
+                      </p>
+                    </div>
+
+                    <div className="pt-2 border-t border-heritage-stone/60 dark:border-heritage-charcoal flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] text-heritage-aged uppercase block">Direct Line</span>
+                        <span className="font-bold text-xs text-heritage-charcoal dark:text-heritage-ivory">{ec.phone}</span>
+                      </div>
+                      <a
+                        href={`tel:${ec.emergency_number || ec.phone}`}
+                        className="px-3 py-1.5 rounded-xl bg-heritage-maroon hover:bg-heritage-maroon-dark text-white font-bold text-xs flex items-center space-x-1.5 shadow-sm"
+                      >
+                        <Phone className="w-3 h-3 text-heritage-gold" />
+                        <span>Call</span>
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 1 Column: Instant SOS Dispatch Form */}
+            <div className="lg:col-span-1 p-5 rounded-3xl bg-white dark:bg-heritage-charcoal border border-heritage-stone dark:border-heritage-charcoal shadow-sm space-y-4">
+              <div>
+                <h3 className="font-serif font-bold text-base text-red-700 dark:text-red-400 flex items-center space-x-2">
+                  <Siren className="w-4 h-4" />
+                  <span>Submit Tourist SOS Alert</span>
+                </h3>
+                <p className="text-xs text-heritage-aged mt-0.5">
+                  Direct telemetry dispatch to Balasore Municipal &amp; Emergency Command
+                </p>
+              </div>
+
+              {sosSuccessResult ? (
+                <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 space-y-2 text-xs">
+                  <div className="flex items-center space-x-2 text-emerald-800 dark:text-emerald-300 font-bold">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                    <span>SOS Dispatch Registered!</span>
+                  </div>
+                  <p className="text-emerald-900 dark:text-emerald-200">
+                    Tracking Code: <strong>{sosSuccessResult.request_code}</strong>
+                  </p>
+                  <p className="text-emerald-700 dark:text-emerald-400 text-[11px]">
+                    Status: {sosSuccessResult.status} · Assigned to Balasore Quick Response Unit. Stay in a safe, visible location.
+                  </p>
+                  <button
+                    onClick={() => setSosSuccessResult(null)}
+                    className="w-full py-2 rounded-xl bg-emerald-600 text-white font-bold text-xs mt-2"
+                  >
+                    Submit Another Request
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmitSOS} className="space-y-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-heritage-aged uppercase tracking-wider mb-1">
+                      Assistance Category *
+                    </label>
+                    <select
+                      value={sosCategory}
+                      onChange={e => setSosCategory(e.target.value)}
+                      className="w-full p-2.5 text-xs rounded-xl border border-heritage-stone dark:border-heritage-charcoal bg-heritage-ivory dark:bg-heritage-charcoal-dark font-medium focus:outline-none"
+                    >
+                      <option value="MEDICAL">Medical Emergency / Injury</option>
+                      <option value="SAFETY">Tidal Swell / Water Hazard</option>
+                      <option value="ACCIDENT">Vehicle / Road Accident</option>
+                      <option value="LOST_PERSON">Lost Tourist / Family Member</option>
+                      <option value="POLICE">Police Assistance / Harassment</option>
+                      <option value="OTHER">Urgent Guidance / Breakdown</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-heritage-aged uppercase tracking-wider mb-1">
+                      Your Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Subham Jena"
+                      value={sosName}
+                      onChange={e => setSosName(e.target.value)}
+                      className="w-full p-2.5 text-xs rounded-xl border border-heritage-stone dark:border-heritage-charcoal bg-heritage-ivory dark:bg-heritage-charcoal-dark focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-heritage-aged uppercase tracking-wider mb-1">
+                      Contact Phone Number *
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="+91-9876543210"
+                      value={sosPhone}
+                      onChange={e => setSosPhone(e.target.value)}
+                      className="w-full p-2.5 text-xs rounded-xl border border-heritage-stone dark:border-heritage-charcoal bg-heritage-ivory dark:bg-heritage-charcoal-dark focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-heritage-aged uppercase tracking-wider mb-1">
+                      Current Location in Balasore *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Chandipur Beach near Guard Tower 2"
+                      value={sosLocation}
+                      onChange={e => setSosLocation(e.target.value)}
+                      className="w-full p-2.5 text-xs rounded-xl border border-heritage-stone dark:border-heritage-charcoal bg-heritage-ivory dark:bg-heritage-charcoal-dark focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-heritage-aged uppercase tracking-wider mb-1">
+                      Emergency Description *
+                    </label>
+                    <textarea
+                      rows={3}
+                      required
+                      placeholder="Describe the situation briefly..."
+                      value={sosDesc}
+                      onChange={e => setSosDesc(e.target.value)}
+                      className="w-full p-2.5 text-xs rounded-xl border border-heritage-stone dark:border-heritage-charcoal bg-heritage-ivory dark:bg-heritage-charcoal-dark focus:outline-none"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={sosLoading}
+                    className="w-full py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs flex items-center justify-center space-x-1.5 shadow-md"
+                  >
+                    <Siren className="w-4 h-4 text-amber-300" />
+                    <span>{sosLoading ? 'Transmitting Alert...' : 'Dispatch SOS Alert'}</span>
+                  </button>
+                </form>
+              )}
+            </div>
+
           </div>
         </div>
       )}
@@ -1305,10 +2057,31 @@ export const SmartTourismCenter: React.FC = () => {
                 Report Inaccurate Information
               </button>
 
-              <div className="flex space-x-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <a
+                  href={`https://maps.google.com/?q=${detailData.latitude},${detailData.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-2 rounded-xl border border-heritage-stone dark:border-heritage-charcoal bg-heritage-ivory dark:bg-heritage-charcoal text-heritage-maroon dark:text-heritage-gold text-xs font-bold hover:border-heritage-gold flex items-center space-x-1"
+                >
+                  <Navigation className="w-3.5 h-3.5" />
+                  <span>Directions</span>
+                </a>
+                <button
+                  onClick={() => {
+                    const id = detailData.id;
+                    setDetailData(null);
+                    setSelectedDestId(id);
+                    setActiveTab('map');
+                  }}
+                  className="px-3 py-2 rounded-xl bg-heritage-gold/20 hover:bg-heritage-gold/30 text-heritage-charcoal dark:text-heritage-gold text-xs font-bold flex items-center space-x-1 transition-colors"
+                >
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>View on Map</span>
+                </button>
                 <button
                   onClick={() => toggleBookmark(detailData.id)}
-                  className="px-4 py-2 rounded-xl border border-heritage-stone dark:border-heritage-charcoal text-heritage-charcoal dark:text-heritage-ivory text-xs font-bold hover:border-heritage-gold"
+                  className="px-3 py-2 rounded-xl border border-heritage-stone dark:border-heritage-charcoal text-heritage-charcoal dark:text-heritage-ivory text-xs font-bold hover:border-heritage-gold"
                 >
                   {savedIds.has(detailData.id) ? 'Bookmarked' : 'Save Place'}
                 </button>
@@ -1318,7 +2091,7 @@ export const SmartTourismCenter: React.FC = () => {
                     setDetailData(null);
                     setActiveTab('planner');
                   }}
-                  className="px-4 py-2 rounded-xl bg-heritage-maroon hover:bg-heritage-maroon-dark text-white text-xs font-bold shadow-heritage"
+                  className="px-3.5 py-2 rounded-xl bg-heritage-maroon hover:bg-heritage-maroon-dark text-white text-xs font-bold shadow-heritage"
                 >
                   Add to Itinerary
                 </button>

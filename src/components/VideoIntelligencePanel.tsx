@@ -658,12 +658,12 @@ export const VideoIntelligencePanel: React.FC<VideoIntelligencePanelProps> = ({ 
       <div className="p-4 rounded-3xl bg-slate-950/80 border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-3 text-xs">
         <div className="flex items-center space-x-2 text-slate-300 font-bold">
           <Sparkles className="w-4 h-4 text-amber-400" />
-          <span>How It Works (यह कैसे काम करता है):</span>
+          <span>How It Works:</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 w-full md:w-auto text-[11px] font-mono">
           <div className={`px-3 py-1.5 rounded-xl border flex items-center space-x-2 ${file || videoUrl ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300 font-bold' : 'bg-amber-950/40 border-amber-500/50 text-amber-300'}`}>
             <span className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center font-bold text-[10px]">1</span>
-            <span>1. Choose Video File (या Preset चुनें)</span>
+            <span>1. Choose Video File (or Preset)</span>
           </div>
           <div className={`px-3 py-1.5 rounded-xl border flex items-center space-x-2 ${isProcessing ? 'bg-amber-950/60 border-amber-500/50 text-amber-300 animate-pulse font-bold' : analysisResult ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300 font-bold' : 'bg-slate-900 border-slate-700 text-slate-400'}`}>
             <span className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center font-bold text-[10px]">2</span>
@@ -920,7 +920,7 @@ export const VideoIntelligencePanel: React.FC<VideoIntelligencePanelProps> = ({ 
               <div className="flex items-center justify-between text-xs">
                 <span className="font-serif font-bold text-slate-300 flex items-center space-x-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                  <span>⚡ 1-Click Test Scenarios (फ़ाइल नहीं है? यहाँ क्लिक करके टेस्ट करें):</span>
+                  <span>⚡ 1-Click Test Scenarios:</span>
                 </span>
                 <span className="text-[10px] text-amber-300 font-mono font-bold">Instant Positive/Negative Test</span>
               </div>

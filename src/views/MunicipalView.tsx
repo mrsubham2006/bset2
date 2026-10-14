@@ -211,7 +211,7 @@ export const MunicipalView: React.FC = () => {
             <div>
               <div className="flex items-center space-x-2">
                 <h1 className="font-serif font-bold text-2xl text-heritage-maroon dark:text-heritage-gold">
-                  {language === 'en' ? "Municipal Department Operations Workspace" : "ପୌର ବିଭାଗ କାର୍ଯ୍ୟ ପରିଚାଳନା"}
+                  Municipal Department Operations Workspace
                 </h1>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest uppercase bg-heritage-gold/20 text-heritage-maroon dark:text-heritage-gold border border-heritage-gold/40">
                   Command Center
