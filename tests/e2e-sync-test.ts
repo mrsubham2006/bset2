@@ -1,6 +1,6 @@
 /**
  * CIVIC NEXUS AI - Automated End-to-End Cross-Portal Synchronization Test Suite
- * Team: CODE BLAZE (BPUT Tech Carnival 2026)
+ * Team: CODE BLAZE (BCET ODYSSEY 2026)
  *
  * Verifies real-time data movement and zero-data-leakage across all 6 portals:
  * 1. Citizen Portal

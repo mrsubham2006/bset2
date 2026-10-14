@@ -303,7 +303,7 @@ export const FieldWorkerAuthView: React.FC<FieldWorkerAuthViewProps> = ({
 
           <div className="flex items-center space-x-2">
             <span className="text-[10px] font-mono uppercase tracking-wider text-heritage-aged bg-heritage-stone/60 dark:bg-heritage-charcoal-dark px-2.5 py-1 rounded-full border border-heritage-stone">
-              BPUT TECH CARNIVAL 2026 • CODE BLAZE
+              BCET ODYSSEY 2026 • CODE BLAZE
             </span>
           </div>
         </div>
