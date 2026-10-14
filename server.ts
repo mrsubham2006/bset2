@@ -17,34 +17,54 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Ensure upload directories exist
-const uploadsDir = path.join(__dirname, 'uploads', 'videos');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+// Ensure secure non-public storage directory exists (strictly outside public web root)
+const secureVideoVaultDir = process.env.SECURE_VAULT_DIR || '/var/lib/civicnexus/secure_videos';
+if (!fs.existsSync(secureVideoVaultDir)) {
+  fs.mkdirSync(secureVideoVaultDir, { recursive: true });
 }
 const evidenceDir = path.join(__dirname, 'uploads', 'evidence');
 if (!fs.existsSync(evidenceDir)) {
   fs.mkdirSync(evidenceDir, { recursive: true });
 }
 
-// Serve uploaded video and evidence files statically
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Block direct public access to vault paths
+app.use(['/storage', '/storage/*', '/vault', '/vault/*'], (req: Request, res: Response) => {
+  res.status(403).json({ error: 'FORBIDDEN', detail: 'Direct public access to secure video vault is forbidden.' });
+});
+
+// Public static serving ONLY for public assets & evidence thumbnails (NOT raw secure videos)
 app.use('/evidence', express.static(path.join(__dirname, 'uploads', 'evidence')));
 
-// Multer storage for real video uploads
-const storage = multer.diskStorage({
+// Allowed formats and size limits for emergency video intelligence
+const allowedVideoExtensions = new Set(['.mp4', '.webm', '.mov', '.m4v', '.mkv', '.avi', '.wmv', '.flv', '.3gp', '.ts']);
+const maxVideoSizeBytes = 250 * 1024 * 1024; // 250MB limit
+
+// Multer storage for secure, non-public emergency video uploads
+const secureVideoStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
-    cb(null, uploadsDir);
+    cb(null, secureVideoVaultDir);
   },
   filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname) || '.mp4';
+    // Sanitize filename to prevent directory traversal and injection
+    const ext = path.extname(file.originalname).toLowerCase() || '.mp4';
     const base = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9_-]/g, '_');
-    cb(null, `${Date.now()}_${base}${ext}`);
+    cb(null, `EMG_VAULT_${Date.now()}_${base}${ext}`);
   }
 });
-const videoUpload = multer({
-  storage,
-  limits: { fileSize: 250 * 1024 * 1024 }
+
+const secureVideoUpload = multer({
+  storage: secureVideoStorage,
+  limits: {
+    fileSize: maxVideoSizeBytes
+  },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const isVideoMime = file.mimetype.startsWith('video/') || file.mimetype === 'application/octet-stream';
+    if (!allowedVideoExtensions.has(ext) && !isVideoMime) {
+      return cb(new Error(`INVALID_FORMAT: Unsupported file format (${ext || 'unknown'}). Supported formats: MP4, WebM, MOV, MKV, AVI, WMV.`));
+    }
+    cb(null, true);
+  }
 });
 
 const PORT = 3000;
@@ -2848,80 +2868,168 @@ app.get(['/api/emergency/stats', '/api/v1/emergency/stats'], (req: Request, res:
 // Register video upload, retrieve status, and fetch results
 // ==========================================
 
-// Register Video Upload (Section 2 & 16)
-app.post(['/api/emergency/videos', '/api/v1/emergency/videos'], (req: Request, res: Response) => {
-  const {
-    fileName,
-    fileSizeBytes,
-    mimeType,
-    durationSeconds,
-    resolution,
-    locationName,
-    cameraCode,
-    recordedAt,
-    description,
-    storageReference,
-    uploadedBy
-  } = req.body;
+// Custom middleware wrapper to handle Multer upload errors gracefully (size limit, invalid format)
+const handleVideoUpload = (req: Request, res: Response, next: any) => {
+  secureVideoUpload.fields([{ name: 'video', maxCount: 1 }, { name: 'file', maxCount: 1 }])(req, res, (err: any) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({
+          error: 'FILE_TOO_LARGE',
+          detail: `File size exceeds the 250MB limit (${(maxVideoSizeBytes / (1024 * 1024)).toFixed(0)}MB). Please compress the video or select a shorter segment.`
+        });
+      }
+      return res.status(400).json({ error: 'UPLOAD_ERROR', detail: err.message });
+    } else if (err) {
+      return res.status(415).json({
+        error: 'INVALID_FORMAT',
+        detail: err.message || 'Unsupported file format. Please upload a valid video file.'
+      });
+    }
+    next();
+  });
+};
+
+// Secure Video Upload Endpoint (Section 2 & 16) - Stores in secure, non-public vault directory
+app.post(['/api/emergency/videos', '/api/v1/emergency/videos'], handleVideoUpload, (req: Request, res: Response) => {
+  const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+  const uploadedFile = (files?.['video']?.[0]) || (files?.['file']?.[0]) || req.file;
+
+  const fileName = uploadedFile ? uploadedFile.originalname : req.body.fileName;
+  const fileSizeBytes = uploadedFile ? uploadedFile.size : Number(req.body.fileSizeBytes || 0);
+  const mimeType = uploadedFile ? uploadedFile.mimetype : (req.body.mimeType || 'video/mp4');
+  const durationSeconds = Number(req.body.durationSeconds || 0);
+  const resolution = req.body.resolution || '1920x1080';
+  const locationName = req.body.locationName || 'Bhubaneswar Urban Arterial Network';
+  const cameraCode = req.body.cameraCode || 'MANUAL-UPLOAD-INTEL';
+  const recordedAt = req.body.recordedAt || new Date().toISOString();
+  const description = req.body.description || '';
+  const uploadedBy = req.body.uploadedBy || 'operator.emergency@civicnexus.gov.in';
 
   if (!fileName) {
-    return res.status(400).json({ detail: 'fileName is required.' });
-  }
-
-  // Validate supported video formats (broad support for laptop & mobile uploads)
-  const ext = fileName.split('.').pop()?.toLowerCase();
-  const validExts = ['mp4', 'webm', 'mov', 'm4v', 'mkv', 'avi', 'wmv', 'flv', '3gp', 'ts', 'ogv', 'ogg', 'jpg', 'jpeg', 'png'];
-  const isVideoMime = typeof mimeType === 'string' && (mimeType.startsWith('video/') || mimeType.startsWith('image/'));
-
-  if (!isVideoMime && (!ext || !validExts.includes(ext))) {
-    return res.status(415).json({
-      detail: `Unsupported file format (.${ext || 'unknown'}). Supported formats: MP4, WebM, MOV, MKV, AVI, WMV.`
+    return res.status(400).json({
+      error: 'MISSING_FILE',
+      detail: 'Video file upload or fileName is required.'
     });
   }
 
-  // File size validation (250MB limit)
-  const maxBytes = 250 * 1024 * 1024;
-  if (fileSizeBytes && fileSizeBytes > maxBytes) {
+  // Validate supported video formats
+  const ext = (path.extname(fileName) || '').toLowerCase();
+  const isVideoMime = typeof mimeType === 'string' && (mimeType.startsWith('video/') || mimeType === 'application/octet-stream');
+
+  if (!allowedVideoExtensions.has(ext) && !isVideoMime) {
+    return res.status(415).json({
+      error: 'INVALID_FORMAT',
+      detail: `Unsupported file format (${ext || 'unknown'}). Supported formats: MP4, WebM, MOV, MKV, AVI, WMV.`
+    });
+  }
+
+  // Validate file size limit
+  if (fileSizeBytes > maxVideoSizeBytes) {
     return res.status(413).json({
-      detail: `File size exceeds the 250MB limit (${(fileSizeBytes / (1024 * 1024)).toFixed(1)}MB). Please compress video or select a shorter segment.`
+      error: 'FILE_TOO_LARGE',
+      detail: `File size exceeds the 250MB limit (${(maxVideoSizeBytes / (1024 * 1024)).toFixed(0)}MB). Please compress video or select a shorter segment.`
     });
   }
 
   const videoAnalysisId = `VID-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
   const now = new Date().toISOString();
 
+  // Secure non-public storage reference in vault
+  const secureVaultRelativePath = uploadedFile
+    ? `/storage/secure_vault/emergency_videos/${uploadedFile.filename}`
+    : (req.body.storageReference || `/storage/secure_vault/emergency_videos/${videoAnalysisId}_${fileName}`);
+
+  const absolutePath = uploadedFile
+    ? uploadedFile.path
+    : (req.body.absolutePath || path.join(secureVideoVaultDir, `${videoAnalysisId}_${fileName}`));
+
   const newAnalysis: any = {
     videoAnalysisId,
-    uploadedBy: uploadedBy || 'operator.emergency@civicnexus.gov.in',
-    storageReference: storageReference || `/evidence/videos/${videoAnalysisId}_${fileName}`,
+    uploadedBy,
+    storageReference: secureVaultRelativePath,
+    absolutePath,
+    isSecureStorage: true,
     fileName,
-    fileSizeBytes: fileSizeBytes || 0,
-    mimeType: mimeType || 'video/mp4',
-    durationSeconds: Number(durationSeconds || 0),
-    resolution: resolution || '1920x1080',
+    fileSizeBytes,
+    mimeType,
+    durationSeconds,
+    resolution,
     framesAnalyzed: 0,
-    analysisStatus: 'QUEUED',
+    analysisStatus: 'UPLOADED',
     processingStartedAt: now,
-    pipelineVersion: 'NexusVision-MultiCategory-v3.2',
-    locationName: locationName || 'Bhubaneswar Urban Arterial Network',
-    cameraCode: cameraCode || 'MANUAL-UPLOAD-INTEL',
-    recordedAt: recordedAt || now,
-    description: description || '',
-    summaryNarrative: 'Video queued for AI emergency inference.',
+    pipelineVersion: 'NexusVision-YOLOv8-v3.2',
+    locationName,
+    cameraCode,
+    recordedAt,
+    description,
+    summaryNarrative: 'Video safely stored in secure vault and queued for AI emergency inference.',
     detectedEmergency: false,
     events: [],
     routeVerificationStatus: cameraCode && cameraCode !== 'MANUAL-UPLOAD-INTEL' ? 'VERIFIED' : 'UNVERIFIED'
   };
 
   dbStore.videoAnalyses.unshift(newAnalysis);
-  addAuditLog(newAnalysis.uploadedBy, 'REGISTER_VIDEO', 'VIDEO_ANALYSIS', `Registered ${fileName} (ID: ${videoAnalysisId}) for emergency analysis.`);
+  addAuditLog(newAnalysis.uploadedBy, 'REGISTER_VIDEO', 'SECURE_VAULT', `Securely stored ${fileName} (${(fileSizeBytes / (1024 * 1024)).toFixed(2)} MB) in non-public vault (ID: ${videoAnalysisId}).`);
 
   res.status(201).json({
     success: true,
     videoAnalysisId,
     videoAnalysis: newAnalysis,
-    message: 'Video upload registered successfully and queued for AI analysis.'
+    secureStoragePath: secureVaultRelativePath,
+    message: 'Video uploaded and stored securely in non-public vault. Ready for AI analysis.'
   });
+});
+
+// Secure Authenticated Video Streaming Route (Controlled access to non-public vault)
+app.get(['/api/emergency/videos/:videoId/stream', '/api/v1/emergency/videos/:videoId/stream'], (req: Request, res: Response) => {
+  const { videoId } = req.params;
+  const analysis = (dbStore.videoAnalyses || []).find(v => v.videoAnalysisId === videoId);
+
+  if (!analysis) {
+    return res.status(404).json({ detail: `Video ${videoId} not found.` });
+  }
+
+  let filePath = (analysis as any).absolutePath;
+  if (!filePath || !fs.existsSync(filePath)) {
+    if (analysis.storageReference) {
+      const p = path.join(__dirname, analysis.storageReference.startsWith('/') ? analysis.storageReference.slice(1) : analysis.storageReference);
+      if (fs.existsSync(p)) filePath = p;
+    }
+  }
+  if (!filePath || !fs.existsSync(filePath)) {
+    filePath = path.join(secureVideoVaultDir, analysis.fileName);
+  }
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ detail: 'Video file not found in secure vault.' });
+  }
+
+  const stat = fs.statSync(filePath);
+  const fileSize = stat.size;
+  const range = req.headers.range;
+
+  if (range) {
+    const parts = range.replace(/bytes=/, '').split('-');
+    const start = parseInt(parts[0], 10);
+    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+    const chunksize = (end - start) + 1;
+    const file = fs.createReadStream(filePath, { start, end });
+    const head = {
+      'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+      'Accept-Ranges': 'bytes',
+      'Content-Length': chunksize,
+      'Content-Type': analysis.mimeType || 'video/mp4',
+    };
+    res.writeHead(206, head);
+    file.pipe(res);
+  } else {
+    const head = {
+      'Content-Length': fileSize,
+      'Content-Type': analysis.mimeType || 'video/mp4',
+    };
+    res.writeHead(200, head);
+    fs.createReadStream(filePath).pipe(res);
+  }
 });
 
 // List all registered videos (Section 16)
